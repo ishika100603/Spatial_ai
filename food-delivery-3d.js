@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { createEnvironment } from './food-delivery-environment.js';
 
 // ---------------------------------------------------------------------------
 // Semantic data (kept separate from the scene)
@@ -91,31 +92,24 @@ renderer.shadowMap.enabled = true;
 canvasHost.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xf3f1ec);
 
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
-camera.position.set(-4, 30, 34);
+camera.position.set(-10, 15, 46);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 0, 1);
+controls.target.set(2, 2, 0);
 controls.enableDamping = true;
 controls.maxPolarAngle = Math.PI / 2.1;
+controls.maxDistance = 220;
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0xd8d2c4, 1.6));
+const hemi = new THREE.HemisphereLight(0xffffff, 0xd8d2c4, 1.6);
+scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffffff, 1.4);
-sun.position.set(15, 30, 12);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
-Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30 });
 scene.add(sun);
 
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 60), new THREE.MeshStandardMaterial({ color: 0xe9e5dc }));
-ground.rotation.x = -Math.PI / 2;
-ground.receiveShadow = true;
-scene.add(ground);
-const grid = new THREE.GridHelper(80, 40, 0xd3cdbf, 0xddd8cc);
-grid.position.y = 0.01;
-scene.add(grid);
+// Sky, terrain, lake, trees and animals (decorative, outside the semantic model).
+const environment = createEnvironment({ scene, renderer, camera, sun, hemi });
 
 const COLORS = { DeliveryPartner: 0x2f80ed, Restaurant: 0xe8743b, UberEats: 0x06c167, Customer: 0x8e5cd9, drivesTo: 0x2f80ed, partnersWith: 0x06c167, route: 0x8e5cd9 };
 
@@ -137,7 +131,7 @@ function makeLabel(text, { color = '#222', bg = 'rgba(255,255,255,0.92)', size =
   ctx.fillText(text, 20, 38);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, toneMapped: false, fog: false }));
   sprite.scale.set((w / 72) * 0.9 * size, 0.9 * size, 1);
   sprite.renderOrder = 10;
   return sprite;
@@ -446,7 +440,7 @@ function select(id) {
   selectedId = id;
   const obj = id === 'O01' ? orderMarker : entityObjects.get(id);
   selectionRing.visible = !!obj;
-  if (obj) selectionRing.position.set(obj.position.x, 0.05, obj.position.z);
+  if (obj) selectionRing.position.set(obj.position.x, 0.06, obj.position.z);
   renderPanel();
 }
 
@@ -584,8 +578,8 @@ root.querySelector('.fd-toolbar').addEventListener('click', (ev) => {
     selectionRing.visible = false;
     buildScene();
     render();
-    camera.position.set(-4, 30, 34);
-    controls.target.set(0, 0, 1);
+    camera.position.set(-10, 15, 46);
+    controls.target.set(2, 2, 0);
     toast('Model reset to the initial example.');
   } else if (a === 'assist') {
     select('UE01');
@@ -634,6 +628,7 @@ function tick() {
   if (hub) hub.userData.spin.forEach((m, i) => (m.rotation[i ? 'z' : 'y'] = t * (i ? 0.6 : 0.8)));
   if (!sim && orderMarker) orderMarker.rotation.y = t * 0.8;
   selectionRing.material.opacity = 0.6 + 0.4 * Math.sin(t * 4);
+  environment.update(dt, t);
   stepSim(dt);
   controls.update();
   renderer.render(scene, camera);

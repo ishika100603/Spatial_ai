@@ -69,6 +69,8 @@ Drag to orbit, right-drag to pan, scroll to zoom, and click any object to inspec
 | Purple house (bottom)       | Customer         | Private profile vs. shareable delivery info        |
 | Brown package               | Order O01        | Status, items, payment, estimated delivery time    |
 
+**Surroundings (decorative):** a realistic sky with sun and drifting clouds, rolling grassy hills, a forest of pine, oak, birch and autumn trees, a lake with ripples, lily pads, reeds, a jetty, ducks and jumping fish, plus animals — cows, sheep and horses in a fenced meadow, deer by the woods, dogs and a cat on walks, hopping rabbits, flying birds and butterflies.
+
 **Relationships:** blue arrows are *drives to*, green arrows are *partners with*, the dashed purple line is the delivery *route*.
 
 **Rules:**
