@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createEnvironment } from './food-delivery-environment.js';
+import { createEnvironment } from './food-delivery-environment.js?v=3';
 
 // ---------------------------------------------------------------------------
 // Semantic data (kept separate from the scene)

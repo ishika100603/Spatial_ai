@@ -57,7 +57,7 @@ Drag to orbit, right-drag to pan, scroll to zoom, and click any object to inspec
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
 </script>
-<script type="module" src="food-delivery-3d.js"></script>
+<script type="module" src="food-delivery-3d.js?v=3"></script>
 
 ## What you are looking at
 
