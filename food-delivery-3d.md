@@ -8,7 +8,7 @@ An interactive 3D view of the semantic model: **Delivery Partner â†’ drives to â
 Drag to orbit, right-drag to pan, scroll to zoom, and click any object to inspect it.
 
 <style>
-#fd3d { position: relative; width: 96vw; margin-left: calc(50% - 48vw); height: 82vh; min-height: 560px; border-radius: 14px; overflow: hidden; border: 1px solid #ddd; font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; color: #222; }
+#fd3d { position: fixed; inset: 0; z-index: 9999; width: 100vw; height: 100vh; overflow: hidden; background: #c6e0f5; font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; color: #222; }
 #fd3d .fd-canvas { position: absolute; inset: 0; }
 #fd3d .fd-canvas canvas { display: block; }
 #fd3d .fd-toolbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; background: rgba(255,255,255,.95); border-radius: 12px; box-shadow: 0 4px 18px rgba(0,0,0,.12); z-index: 2; }
@@ -57,7 +57,7 @@ Drag to orbit, right-drag to pan, scroll to zoom, and click any object to inspec
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
 </script>
-<script type="module" src="food-delivery-3d.js?v=3"></script>
+<script type="module" src="food-delivery-3d.js?v=4"></script>
 
 ## What you are looking at
 
