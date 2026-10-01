@@ -1,0 +1,8 @@
+# Buildings standing on parcels inside the flood zone.
+PREFIX sc: <https://example.org/smallcity#>
+SELECT ?building ?district ?floorArea ?yearBuilt
+WHERE {
+  ?b sc:locatedOn ?p ; sc:name ?building ; sc:floorAreaSqm ?floorArea ;
+     sc:yearBuilt ?yearBuilt ; sc:inDistrict/sc:name ?district .
+  ?p sc:floodZone true .
+}

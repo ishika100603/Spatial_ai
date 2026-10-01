@@ -1,0 +1,59 @@
+@prefix sc:   <https://example.org/smallcity#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix geo:  <http://www.opengis.net/ont/geosparql#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# SHACL integrity constraints for city data.
+
+sc:CityElementShape a sh:NodeShape ;
+    sh:targetClass sc:District , sc:Parcel , sc:Building , sc:RoadSegment , sc:Intersection ,
+                   sc:TransitStop , sc:UtilityAsset , sc:OpenSpace , sc:WaterBody ;
+    sh:property [
+        sh:path geo:hasGeometry ;
+        sh:minCount 1 ;
+        sh:message "Every spatial element needs a geometry." ;
+    ] .
+
+sc:DistrictShape a sh:NodeShape ;
+    sh:targetClass sc:District ;
+    sh:property [ sh:path sc:partOf ; sh:class sc:City ; sh:minCount 1 ] ;
+    sh:property [ sh:path sc:population ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:maxCount 1 ] .
+
+sc:ParcelShape a sh:NodeShape ;
+    sh:targetClass sc:Parcel ;
+    sh:property [ sh:path sc:inDistrict ; sh:class sc:District ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path sc:hasZoning ; sh:class sc:ZoningCode ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path sc:fronts ; sh:minCount 1 ;
+                  sh:message "Parcel must have street access." ] .
+
+sc:BuildingShape a sh:NodeShape ;
+    sh:targetClass sc:Building ;
+    sh:property [ sh:path sc:locatedOn ; sh:class sc:Parcel ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path sc:storeys ; sh:datatype xsd:integer ; sh:minInclusive 1 ; sh:maxInclusive 8 ;
+                  sh:message "Small-city buildings are expected to have 1–8 storeys." ] ;
+    sh:property [ sh:path sc:floorAreaSqm ; sh:datatype xsd:decimal ; sh:minExclusive 0 ] .
+
+# Residential units may only stand on residential or mixed-use zoning.
+sc:ResidentialZoningShape a sh:NodeShape ;
+    sh:targetClass sc:ResidentialBuilding ;
+    sh:property [
+        sh:path ( sc:locatedOn sc:hasZoning ) ;
+        sh:in ( sc:R1 sc:R2 sc:MU ) ;
+        sh:message "Residential building on a parcel not zoned R-1, R-2 or MU." ;
+    ] .
+
+sc:RoadSegmentShape a sh:NodeShape ;
+    sh:targetClass sc:RoadSegment ;
+    sh:property [ sh:path sc:startsAt ; sh:class sc:Intersection ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path sc:endsAt   ; sh:class sc:Intersection ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path sc:hasRoadClass ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path sc:speedLimitKmh ; sh:maxInclusive 60 ] .
+
+sc:BridgeShape a sh:NodeShape ;
+    sh:targetClass sc:Bridge ;
+    sh:property [ sh:path sc:crosses ; sh:class sc:WaterBody ; sh:minCount 1 ] .
+
+sc:ServiceShape a sh:NodeShape ;
+    sh:targetClass sc:Service ;
+    sh:property [ sh:path sc:hostedBy ; sh:class sc:Building ; sh:minCount 1 ] ;
+    sh:property [ sh:path sc:servesArea ; sh:class sc:District ; sh:minCount 1 ] .

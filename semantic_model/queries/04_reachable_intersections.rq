@@ -1,0 +1,10 @@
+# Intersections reachable from the town centre by road (transitive path over the road graph).
+PREFIX sc: <https://example.org/smallcity#>
+PREFIX mb: <https://example.org/millbrook/>
+SELECT DISTINCT ?intersection
+WHERE {
+  mb:I_MainMarket (sc:connectsTo|^sc:connectsTo)+ ?i .
+  ?i sc:name ?intersection .
+  FILTER (?i != mb:I_MainMarket)
+}
+ORDER BY ?intersection

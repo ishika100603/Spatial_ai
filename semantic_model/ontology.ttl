@@ -1,0 +1,242 @@
+@prefix sc:   <https://example.org/smallcity#> .
+@prefix geo:  <http://www.opengis.net/ont/geosparql#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+
+#################################################################
+#  Small City Ontology (TBox)
+#  Vocabulary for describing the physical, functional and
+#  infrastructural structure of a small-scale city (~1k–20k people).
+#  Spatial features specialise GeoSPARQL so geometry and topology
+#  can be queried with standard GeoSPARQL functions.
+#################################################################
+
+<https://example.org/smallcity>
+    a owl:Ontology ;
+    dct:title "Small City Semantic Model" ;
+    dct:description "Ontology of districts, parcels, buildings, transport, services, utilities and green/blue space for a small-scale city." ;
+    owl:versionInfo "0.1.0" .
+
+#################################################################
+#  Top-level classes
+#################################################################
+
+sc:CityElement a owl:Class ;
+    rdfs:label "City element" ;
+    rdfs:comment "Anything that is part of the city model and has a spatial footprint." ;
+    rdfs:subClassOf geo:Feature .
+
+sc:City a owl:Class ;
+    rdfs:subClassOf sc:CityElement ;
+    rdfs:label "City" ;
+    rdfs:comment "The municipality as a whole; root of the containment hierarchy." .
+
+sc:District a owl:Class ;
+    rdfs:subClassOf sc:CityElement ;
+    rdfs:label "District" ;
+    rdfs:comment "Named neighbourhood or administrative sub-area of the city." .
+
+sc:Parcel a owl:Class ;
+    rdfs:subClassOf sc:CityElement ;
+    rdfs:label "Parcel" ;
+    rdfs:comment "A cadastral land lot. Every building stands on exactly one parcel." .
+
+#################################################################
+#  Built environment
+#################################################################
+
+sc:Building a owl:Class ;
+    rdfs:subClassOf sc:CityElement ;
+    rdfs:label "Building" .
+
+sc:ResidentialBuilding a owl:Class ; rdfs:subClassOf sc:Building ; rdfs:label "Residential building" .
+sc:CommercialBuilding  a owl:Class ; rdfs:subClassOf sc:Building ; rdfs:label "Commercial building" .
+sc:IndustrialBuilding  a owl:Class ; rdfs:subClassOf sc:Building ; rdfs:label "Industrial building" .
+sc:CivicBuilding       a owl:Class ; rdfs:subClassOf sc:Building ; rdfs:label "Civic building" ;
+    rdfs:comment "Building housing a public service (government, education, health, safety, culture)." .
+sc:MixedUseBuilding    a owl:Class ; rdfs:subClassOf sc:Building ; rdfs:label "Mixed-use building" ;
+    rdfs:comment "Building combining residential and commercial uses, e.g. shops below flats." .
+
+sc:ResidentialBuilding owl:disjointWith sc:IndustrialBuilding .
+
+#################################################################
+#  Public services (functions hosted in buildings)
+#################################################################
+
+sc:Service a owl:Class ;
+    rdfs:label "Service" ;
+    rdfs:comment "A function provided to residents. Hosted by a building; has a service area." .
+
+sc:EducationService  a owl:Class ; rdfs:subClassOf sc:Service ; rdfs:label "Education service" .
+sc:HealthService     a owl:Class ; rdfs:subClassOf sc:Service ; rdfs:label "Health service" .
+sc:EmergencyService  a owl:Class ; rdfs:subClassOf sc:Service ; rdfs:label "Emergency service" .
+sc:FireService       a owl:Class ; rdfs:subClassOf sc:EmergencyService ; rdfs:label "Fire service" .
+sc:PoliceService     a owl:Class ; rdfs:subClassOf sc:EmergencyService ; rdfs:label "Police service" .
+sc:GovernmentService a owl:Class ; rdfs:subClassOf sc:Service ; rdfs:label "Government service" .
+sc:CulturalService   a owl:Class ; rdfs:subClassOf sc:Service ; rdfs:label "Cultural service" .
+sc:RetailService     a owl:Class ; rdfs:subClassOf sc:Service ; rdfs:label "Retail service" .
+
+#################################################################
+#  Transport network (node–edge graph)
+#################################################################
+
+sc:TransportElement a owl:Class ; rdfs:subClassOf sc:CityElement ; rdfs:label "Transport element" .
+
+sc:RoadSegment a owl:Class ;
+    rdfs:subClassOf sc:TransportElement ;
+    rdfs:label "Road segment" ;
+    rdfs:comment "Edge of the road graph between two intersections." .
+
+sc:Intersection a owl:Class ;
+    rdfs:subClassOf sc:TransportElement ;
+    rdfs:label "Intersection" ;
+    rdfs:comment "Node of the road graph." .
+
+sc:Bridge a owl:Class ;
+    rdfs:subClassOf sc:RoadSegment ;
+    rdfs:label "Bridge" ;
+    rdfs:comment "Road segment crossing a water body." .
+
+sc:TransitStop a owl:Class ; rdfs:subClassOf sc:TransportElement ; rdfs:label "Transit stop" .
+sc:TransitRoute a owl:Class ; rdfs:label "Transit route" ;
+    rdfs:comment "Ordered service (e.g. bus line) calling at transit stops." .
+
+sc:RoadClass a owl:Class ; rdfs:label "Road class" .
+sc:Arterial  a sc:RoadClass ; rdfs:label "Arterial" .
+sc:Collector a sc:RoadClass ; rdfs:label "Collector" .
+sc:Local     a sc:RoadClass ; rdfs:label "Local" .
+
+#################################################################
+#  Utilities
+#################################################################
+
+sc:UtilityAsset a owl:Class ; rdfs:subClassOf sc:CityElement ; rdfs:label "Utility asset" .
+sc:Substation           a owl:Class ; rdfs:subClassOf sc:UtilityAsset ; rdfs:label "Electrical substation" .
+sc:WaterTreatmentPlant  a owl:Class ; rdfs:subClassOf sc:UtilityAsset ; rdfs:label "Water treatment plant" .
+sc:WaterTower           a owl:Class ; rdfs:subClassOf sc:UtilityAsset ; rdfs:label "Water tower" .
+
+sc:UtilityNetwork a owl:Class ; rdfs:label "Utility network" .
+sc:PowerNetwork a owl:Class ; rdfs:subClassOf sc:UtilityNetwork ; rdfs:label "Power network" .
+sc:WaterNetwork a owl:Class ; rdfs:subClassOf sc:UtilityNetwork ; rdfs:label "Water network" .
+
+#################################################################
+#  Green and blue infrastructure
+#################################################################
+
+sc:OpenSpace a owl:Class ; rdfs:subClassOf sc:CityElement ; rdfs:label "Open space" .
+sc:Park      a owl:Class ; rdfs:subClassOf sc:OpenSpace ; rdfs:label "Park" .
+sc:Plaza     a owl:Class ; rdfs:subClassOf sc:OpenSpace ; rdfs:label "Plaza" .
+sc:WaterBody a owl:Class ; rdfs:subClassOf sc:CityElement ; rdfs:label "Water body" .
+sc:River     a owl:Class ; rdfs:subClassOf sc:WaterBody ; rdfs:label "River" .
+
+#################################################################
+#  Planning
+#################################################################
+
+sc:ZoningCode a owl:Class ; rdfs:label "Zoning code" .
+sc:R1 a sc:ZoningCode ; rdfs:label "R-1 Low-density residential" .
+sc:R2 a sc:ZoningCode ; rdfs:label "R-2 Medium-density residential" .
+sc:C1 a sc:ZoningCode ; rdfs:label "C-1 Town-centre commercial" .
+sc:MU a sc:ZoningCode ; rdfs:label "MU Mixed use" .
+sc:I1 a sc:ZoningCode ; rdfs:label "I-1 Light industrial" .
+sc:P  a sc:ZoningCode ; rdfs:label "P Public / institutional" .
+sc:OS a sc:ZoningCode ; rdfs:label "OS Open space" .
+
+#################################################################
+#  Object properties
+#################################################################
+
+sc:partOf a owl:ObjectProperty, owl:TransitiveProperty ;
+    rdfs:label "part of" ;
+    rdfs:comment "Containment hierarchy: Building → Parcel → District → City." ;
+    rdfs:domain sc:CityElement ;
+    rdfs:range  sc:CityElement .
+
+sc:hasPart a owl:ObjectProperty ; owl:inverseOf sc:partOf ; rdfs:label "has part" .
+
+sc:locatedOn a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:subPropertyOf sc:partOf ;
+    rdfs:label "located on" ;
+    rdfs:domain sc:Building ;
+    rdfs:range  sc:Parcel .
+
+sc:inDistrict a owl:ObjectProperty ;
+    rdfs:subPropertyOf sc:partOf ;
+    rdfs:label "in district" ;
+    rdfs:range sc:District .
+
+sc:adjacentTo a owl:ObjectProperty, owl:SymmetricProperty ;
+    rdfs:label "adjacent to" ;
+    rdfs:comment "Shares a boundary (cf. geo:sfTouches)." ;
+    rdfs:domain sc:CityElement ; rdfs:range sc:CityElement .
+
+sc:fronts a owl:ObjectProperty ;
+    rdfs:label "fronts" ;
+    rdfs:comment "Parcel or building has street access onto a road segment." ;
+    rdfs:range sc:RoadSegment .
+
+sc:startsAt a owl:ObjectProperty ; rdfs:label "starts at" ;
+    rdfs:domain sc:RoadSegment ; rdfs:range sc:Intersection .
+sc:endsAt a owl:ObjectProperty ; rdfs:label "ends at" ;
+    rdfs:domain sc:RoadSegment ; rdfs:range sc:Intersection .
+
+sc:connectsTo a owl:ObjectProperty, owl:SymmetricProperty ;
+    rdfs:label "connects to" ;
+    rdfs:comment "Two intersections joined directly by a road segment (derivable from startsAt/endsAt)." ;
+    rdfs:domain sc:Intersection ; rdfs:range sc:Intersection .
+
+sc:hasRoadClass a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:domain sc:RoadSegment ; rdfs:range sc:RoadClass ; rdfs:label "has road class" .
+
+sc:crosses a owl:ObjectProperty ; rdfs:label "crosses" ;
+    rdfs:domain sc:Bridge ; rdfs:range sc:WaterBody .
+
+sc:servesStop a owl:ObjectProperty ; rdfs:label "serves stop" ;
+    rdfs:domain sc:TransitRoute ; rdfs:range sc:TransitStop .
+
+sc:nearestStop a owl:ObjectProperty ; rdfs:label "nearest stop" ;
+    rdfs:domain sc:Building ; rdfs:range sc:TransitStop .
+
+sc:hostsService a owl:ObjectProperty ; rdfs:label "hosts service" ;
+    rdfs:domain sc:Building ; rdfs:range sc:Service .
+
+sc:hostedBy a owl:ObjectProperty ; owl:inverseOf sc:hostsService ; rdfs:label "hosted by" .
+
+sc:servesArea a owl:ObjectProperty ; rdfs:label "serves area" ;
+    rdfs:comment "Catchment of a service, expressed as districts." ;
+    rdfs:domain sc:Service ; rdfs:range sc:District .
+
+sc:hasZoning a owl:ObjectProperty, owl:FunctionalProperty ; rdfs:label "has zoning" ;
+    rdfs:domain sc:Parcel ; rdfs:range sc:ZoningCode .
+
+sc:connectedTo a owl:ObjectProperty ; rdfs:label "connected to (utility)" ;
+    rdfs:domain sc:CityElement ; rdfs:range sc:UtilityNetwork .
+
+sc:feeds a owl:ObjectProperty ; rdfs:label "feeds" ;
+    rdfs:domain sc:UtilityAsset ; rdfs:range sc:UtilityNetwork .
+
+#################################################################
+#  Datatype properties
+#################################################################
+
+sc:name a owl:DatatypeProperty ; rdfs:subPropertyOf rdfs:label ; rdfs:range xsd:string ; rdfs:label "name" .
+sc:population a owl:DatatypeProperty ; rdfs:range xsd:nonNegativeInteger ; rdfs:label "population" .
+sc:households a owl:DatatypeProperty ; rdfs:range xsd:nonNegativeInteger ; rdfs:label "households" .
+sc:areaSqm a owl:DatatypeProperty ; rdfs:range xsd:decimal ; rdfs:label "area (m²)" .
+sc:floorAreaSqm a owl:DatatypeProperty ; rdfs:domain sc:Building ; rdfs:range xsd:decimal ; rdfs:label "gross floor area (m²)" .
+sc:storeys a owl:DatatypeProperty ; rdfs:domain sc:Building ; rdfs:range xsd:positiveInteger ; rdfs:label "storeys" .
+sc:heightM a owl:DatatypeProperty ; rdfs:domain sc:Building ; rdfs:range xsd:decimal ; rdfs:label "height (m)" .
+sc:yearBuilt a owl:DatatypeProperty ; rdfs:domain sc:Building ; rdfs:range xsd:gYear ; rdfs:label "year built" .
+sc:dwellingUnits a owl:DatatypeProperty ; rdfs:domain sc:Building ; rdfs:range xsd:nonNegativeInteger ; rdfs:label "dwelling units" .
+sc:lengthM a owl:DatatypeProperty ; rdfs:domain sc:RoadSegment ; rdfs:range xsd:decimal ; rdfs:label "length (m)" .
+sc:lanes a owl:DatatypeProperty ; rdfs:domain sc:RoadSegment ; rdfs:range xsd:positiveInteger ; rdfs:label "lanes" .
+sc:speedLimitKmh a owl:DatatypeProperty ; rdfs:domain sc:RoadSegment ; rdfs:range xsd:positiveInteger ; rdfs:label "speed limit (km/h)" .
+sc:capacity a owl:DatatypeProperty ; rdfs:domain sc:Service ; rdfs:range xsd:nonNegativeInteger ; rdfs:label "capacity" ;
+    rdfs:comment "Persons served at once (pupils, beds, seats …)." .
+sc:headwayMin a owl:DatatypeProperty ; rdfs:domain sc:TransitRoute ; rdfs:range xsd:positiveInteger ; rdfs:label "headway (min)" .
+sc:capacityKVA a owl:DatatypeProperty ; rdfs:domain sc:Substation ; rdfs:range xsd:decimal ; rdfs:label "capacity (kVA)" .
+sc:capacityM3PerDay a owl:DatatypeProperty ; rdfs:range xsd:decimal ; rdfs:label "capacity (m³/day)" .
+sc:floodZone a owl:DatatypeProperty ; rdfs:domain sc:Parcel ; rdfs:range xsd:boolean ; rdfs:label "in flood zone" .

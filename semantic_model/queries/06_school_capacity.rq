@@ -1,0 +1,8 @@
+# Compare school capacity with an estimated school-age population (≈ 8% of residents).
+PREFIX sc: <https://example.org/smallcity#>
+SELECT ?school ?capacity (ROUND(SUM(?pop) * 0.08) AS ?estimatedPupils)
+WHERE {
+  ?s a sc:EducationService ; sc:name ?school ; sc:capacity ?capacity ; sc:servesArea ?d .
+  ?d sc:population ?pop .
+}
+GROUP BY ?school ?capacity

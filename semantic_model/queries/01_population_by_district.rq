@@ -1,0 +1,7 @@
+# Population, households and density per district.
+PREFIX sc: <https://example.org/smallcity#>
+SELECT ?district ?population ?households
+WHERE {
+  ?d a sc:District ; sc:name ?district ; sc:population ?population ; sc:households ?households .
+}
+ORDER BY DESC(?population)

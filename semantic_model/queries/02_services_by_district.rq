@@ -1,0 +1,11 @@
+# Which public services are physically located in each district?
+PREFIX sc:   <https://example.org/smallcity#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT ?district ?service ?type ?building
+WHERE {
+  ?s sc:hostedBy ?b ; sc:name ?service ; a ?t .
+  ?t rdfs:label ?type .
+  ?b sc:name ?building ; sc:inDistrict/sc:name ?district .
+  FILTER (?t != sc:Service)
+}
+ORDER BY ?district ?service

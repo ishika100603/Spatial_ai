@@ -1,0 +1,9 @@
+# Districts across the river reachable only via a bridge — critical links for emergency access.
+PREFIX sc: <https://example.org/smallcity#>
+SELECT ?bridge ?river ?districtServed
+WHERE {
+  ?br a sc:Bridge ; sc:name ?bridge ; sc:crosses/sc:name ?river ; sc:endsAt ?n .
+  ?seg sc:startsAt ?n .
+  ?b sc:fronts ?seg ; sc:inDistrict/sc:name ?districtServed .
+}
+GROUP BY ?bridge ?river ?districtServed

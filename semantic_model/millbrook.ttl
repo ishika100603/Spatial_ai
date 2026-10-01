@@ -1,0 +1,621 @@
+@prefix sc:   <https://example.org/smallcity#> .
+@prefix mb:   <https://example.org/millbrook/> .
+@prefix geo:  <http://www.opengis.net/ont/geosparql#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+#################################################################
+#  Millbrook — instance data (ABox) for the Small City ontology.
+#  A fictional river town of ~4,800 residents.
+#  Geometry: WKT in OGC CRS84 (lon lat). The town spans roughly
+#  1.3 km E–W by 1.1 km N–S; the Mill River runs north–south
+#  between lon -73.898 and -73.897.
+#
+#      lat 41.705 ┌──────────┬──────────┬─┬────────┐
+#                 │ Northside│ Old Town │R│Eastbank│
+#      lat 41.700 ├──Main St─┼──────────┤i├─(bridge)
+#                 │ Southgate│ Riverside│v│        │
+#      lat 41.695 └──────────┴──────────┴─┴────────┘
+#             -73.910     -73.904    -73.898  -73.894
+#                     Market St    River Rd  Mill Ln
+#################################################################
+
+# ---------------------------------------------------------------
+#  City and districts
+# ---------------------------------------------------------------
+mb:Millbrook a sc:City ;
+    sc:name "Millbrook" ;
+    sc:population 4800 ;
+    sc:households 2010 ;
+    sc:areaSqm 1443000.0 ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.91 41.695, -73.894 41.695, -73.894 41.705, -73.91 41.705, -73.91 41.695))"^^geo:wktLiteral ] .
+
+# ---------------------------------------------------------------
+#  Districts
+# ---------------------------------------------------------------
+mb:Northside a sc:District ;
+    sc:name "Northside" ;
+    rdfs:comment "Low/medium-density residential north of Main Street." ;
+    sc:partOf mb:Millbrook ;
+    sc:population 1800 ;
+    sc:households 760 ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.91 41.7, -73.904 41.7, -73.904 41.705, -73.91 41.705, -73.91 41.7))"^^geo:wktLiteral ] .
+
+mb:OldTown a sc:District ;
+    sc:name "Old Town" ;
+    rdfs:comment "Historic town centre: civic buildings, shops and flats." ;
+    sc:partOf mb:Millbrook ;
+    sc:population 900 ;
+    sc:households 450 ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.904 41.7, -73.898 41.7, -73.898 41.705, -73.904 41.705, -73.904 41.7))"^^geo:wktLiteral ] .
+
+mb:Southgate a sc:District ;
+    sc:name "Southgate" ;
+    rdfs:comment "Residential district with the elementary school and fire station." ;
+    sc:partOf mb:Millbrook ;
+    sc:population 1700 ;
+    sc:households 690 ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.91 41.695, -73.904 41.695, -73.904 41.7, -73.91 41.7, -73.91 41.695))"^^geo:wktLiteral ] .
+
+mb:Riverside a sc:District ;
+    sc:name "Riverside" ;
+    rdfs:comment "Riverside park and former mill, partly in the flood zone." ;
+    sc:partOf mb:Millbrook ;
+    sc:population 300 ;
+    sc:households 75 ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.904 41.695, -73.898 41.695, -73.898 41.7, -73.904 41.7, -73.904 41.695))"^^geo:wktLiteral ] .
+
+mb:Eastbank a sc:District ;
+    sc:name "Eastbank" ;
+    rdfs:comment "East of the river: utilities and light industry." ;
+    sc:partOf mb:Millbrook ;
+    sc:population 100 ;
+    sc:households 35 ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.897 41.695, -73.894 41.695, -73.894 41.705, -73.897 41.705, -73.897 41.695))"^^geo:wktLiteral ] .
+
+mb:Northside sc:adjacentTo mb:OldTown , mb:Southgate .
+mb:OldTown   sc:adjacentTo mb:Riverside .
+mb:Southgate sc:adjacentTo mb:Riverside .
+
+# ---------------------------------------------------------------
+#  Green and blue infrastructure
+# ---------------------------------------------------------------
+mb:MillRiver a sc:River ;
+    sc:name "Mill River" ;
+    sc:partOf mb:Millbrook ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.898 41.695, -73.897 41.695, -73.897 41.705, -73.898 41.705, -73.898 41.695))"^^geo:wktLiteral ] .
+
+mb:RiversidePark a sc:Park ;
+    sc:name "Riverside Park" ;
+    sc:inDistrict mb:Riverside ;
+    sc:areaSqm 61000.0 ;
+    sc:adjacentTo mb:MillRiver ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.9005 41.695, -73.898 41.695, -73.898 41.6985, -73.9005 41.6985, -73.9005 41.695))"^^geo:wktLiteral ] .
+
+mb:MarketSquare a sc:Plaza ;
+    sc:name "Market Square" ;
+    sc:inDistrict mb:OldTown ;
+    sc:areaSqm 2400.0 ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.9034 41.7006, -73.903 41.7006, -73.903 41.701, -73.9034 41.701, -73.9034 41.7006))"^^geo:wktLiteral ] .
+
+# ---------------------------------------------------------------
+#  Road network — intersections (nodes)
+# ---------------------------------------------------------------
+mb:I_MainMarket a sc:Intersection ;
+    sc:name "Main St & Market St" ;
+    sc:partOf mb:Millbrook ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POINT(-73.904 41.7)"^^geo:wktLiteral ] .
+
+mb:I_MainWest a sc:Intersection ;
+    sc:name "Main St west end" ;
+    sc:partOf mb:Millbrook ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POINT(-73.91 41.7)"^^geo:wktLiteral ] .
+
+mb:I_MainRiver a sc:Intersection ;
+    sc:name "Main St & River Rd" ;
+    sc:partOf mb:Millbrook ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POINT(-73.898 41.7)"^^geo:wktLiteral ] .
+
+mb:I_MainMill a sc:Intersection ;
+    sc:name "Main St & Mill Ln" ;
+    sc:partOf mb:Millbrook ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POINT(-73.897 41.7)"^^geo:wktLiteral ] .
+
+mb:I_MarketNorth a sc:Intersection ;
+    sc:name "Market St north end" ;
+    sc:partOf mb:Millbrook ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POINT(-73.904 41.705)"^^geo:wktLiteral ] .
+
+mb:I_MarketSouth a sc:Intersection ;
+    sc:name "Market St south end" ;
+    sc:partOf mb:Millbrook ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POINT(-73.904 41.695)"^^geo:wktLiteral ] .
+
+mb:I_RiverNorth a sc:Intersection ;
+    sc:name "River Rd north end" ;
+    sc:partOf mb:Millbrook ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POINT(-73.898 41.705)"^^geo:wktLiteral ] .
+
+mb:I_RiverSouth a sc:Intersection ;
+    sc:name "River Rd south end" ;
+    sc:partOf mb:Millbrook ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POINT(-73.898 41.695)"^^geo:wktLiteral ] .
+
+mb:I_MillSouth a sc:Intersection ;
+    sc:name "Mill Ln south end" ;
+    sc:partOf mb:Millbrook ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POINT(-73.897 41.695)"^^geo:wktLiteral ] .
+
+# ---------------------------------------------------------------
+#  Road network — segments (edges)
+# ---------------------------------------------------------------
+mb:MainSt_West a sc:RoadSegment ;
+    sc:name "Main Street (west)" ;
+    sc:partOf mb:Millbrook ;
+    sc:hasRoadClass sc:Arterial ;
+    sc:startsAt mb:I_MainWest ;
+    sc:endsAt mb:I_MainMarket ;
+    sc:lengthM 498.0 ;
+    sc:lanes 2 ;
+    sc:speedLimitKmh 50 ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "LINESTRING(-73.91 41.7, -73.904 41.7)"^^geo:wktLiteral ] .
+
+mb:MainSt_East a sc:RoadSegment ;
+    sc:name "Main Street (east)" ;
+    sc:partOf mb:Millbrook ;
+    sc:hasRoadClass sc:Arterial ;
+    sc:startsAt mb:I_MainMarket ;
+    sc:endsAt mb:I_MainRiver ;
+    sc:lengthM 498.0 ;
+    sc:lanes 2 ;
+    sc:speedLimitKmh 40 ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "LINESTRING(-73.904 41.7, -73.898 41.7)"^^geo:wktLiteral ] .
+
+mb:MillBridge a sc:Bridge ;
+    sc:name "Mill Bridge" ;
+    sc:partOf mb:Millbrook ;
+    sc:hasRoadClass sc:Arterial ;
+    sc:startsAt mb:I_MainRiver ;
+    sc:endsAt mb:I_MainMill ;
+    sc:lengthM 83.0 ;
+    sc:lanes 2 ;
+    sc:speedLimitKmh 40 ;
+    sc:crosses mb:MillRiver ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "LINESTRING(-73.898 41.7, -73.897 41.7)"^^geo:wktLiteral ] .
+
+mb:MarketSt_North a sc:RoadSegment ;
+    sc:name "Market Street (north)" ;
+    sc:partOf mb:Millbrook ;
+    sc:hasRoadClass sc:Collector ;
+    sc:startsAt mb:I_MainMarket ;
+    sc:endsAt mb:I_MarketNorth ;
+    sc:lengthM 556.0 ;
+    sc:lanes 2 ;
+    sc:speedLimitKmh 40 ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "LINESTRING(-73.904 41.7, -73.904 41.705)"^^geo:wktLiteral ] .
+
+mb:MarketSt_South a sc:RoadSegment ;
+    sc:name "Market Street (south)" ;
+    sc:partOf mb:Millbrook ;
+    sc:hasRoadClass sc:Collector ;
+    sc:startsAt mb:I_MainMarket ;
+    sc:endsAt mb:I_MarketSouth ;
+    sc:lengthM 556.0 ;
+    sc:lanes 2 ;
+    sc:speedLimitKmh 40 ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "LINESTRING(-73.904 41.7, -73.904 41.695)"^^geo:wktLiteral ] .
+
+mb:RiverRd_North a sc:RoadSegment ;
+    sc:name "River Road (north)" ;
+    sc:partOf mb:Millbrook ;
+    sc:hasRoadClass sc:Local ;
+    sc:startsAt mb:I_MainRiver ;
+    sc:endsAt mb:I_RiverNorth ;
+    sc:lengthM 556.0 ;
+    sc:lanes 2 ;
+    sc:speedLimitKmh 30 ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "LINESTRING(-73.898 41.7, -73.898 41.705)"^^geo:wktLiteral ] .
+
+mb:RiverRd_South a sc:RoadSegment ;
+    sc:name "River Road (south)" ;
+    sc:partOf mb:Millbrook ;
+    sc:hasRoadClass sc:Local ;
+    sc:startsAt mb:I_MainRiver ;
+    sc:endsAt mb:I_RiverSouth ;
+    sc:lengthM 556.0 ;
+    sc:lanes 2 ;
+    sc:speedLimitKmh 30 ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "LINESTRING(-73.898 41.7, -73.898 41.695)"^^geo:wktLiteral ] .
+
+mb:MillLane a sc:RoadSegment ;
+    sc:name "Mill Lane" ;
+    sc:partOf mb:Millbrook ;
+    sc:hasRoadClass sc:Local ;
+    sc:startsAt mb:I_MainMill ;
+    sc:endsAt mb:I_MillSouth ;
+    sc:lengthM 556.0 ;
+    sc:lanes 2 ;
+    sc:speedLimitKmh 30 ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "LINESTRING(-73.897 41.7, -73.897 41.695)"^^geo:wktLiteral ] .
+
+# Node adjacency (materialised from startsAt/endsAt for convenience)
+mb:I_MainWest sc:connectsTo mb:I_MainMarket .
+mb:I_MainMarket sc:connectsTo mb:I_MainRiver .
+mb:I_MainRiver sc:connectsTo mb:I_MainMill .
+mb:I_MainMarket sc:connectsTo mb:I_MarketNorth .
+mb:I_MainMarket sc:connectsTo mb:I_MarketSouth .
+mb:I_MainRiver sc:connectsTo mb:I_RiverNorth .
+mb:I_MainRiver sc:connectsTo mb:I_RiverSouth .
+mb:I_MainMill sc:connectsTo mb:I_MillSouth .
+
+# ---------------------------------------------------------------
+#  Utility networks
+# ---------------------------------------------------------------
+mb:PowerGrid a sc:PowerNetwork ; sc:name "Millbrook distribution grid" .
+mb:WaterSupply a sc:WaterNetwork ; sc:name "Millbrook water supply" .
+
+# ---------------------------------------------------------------
+#  Parcels and buildings
+# ---------------------------------------------------------------
+mb:Parcel_TownHall a sc:Parcel ;
+    sc:inDistrict mb:OldTown ;
+    sc:hasZoning sc:P ;
+    sc:fronts mb:MainSt_East ;
+    sc:floodZone false ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90325 41.70155, -73.90275 41.70155, -73.90275 41.70205, -73.90325 41.70205, -73.90325 41.70155))"^^geo:wktLiteral ] .
+
+mb:TownHall a sc:CivicBuilding ;
+    sc:name "Millbrook Town Hall" ;
+    sc:locatedOn mb:Parcel_TownHall ;
+    sc:inDistrict mb:OldTown ;
+    sc:fronts mb:MainSt_East ;
+    sc:floorAreaSqm 2100.0 ;
+    sc:storeys 3 ;
+    sc:heightM 13.5 ;
+    sc:yearBuilt "1898"^^xsd:gYear ;
+    sc:dwellingUnits 0 ;
+    sc:connectedTo mb:PowerGrid , mb:WaterSupply ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90315 41.70165, -73.90285 41.70165, -73.90285 41.70195, -73.90315 41.70195, -73.90315 41.70165))"^^geo:wktLiteral ] .
+
+mb:Parcel_Library a sc:Parcel ;
+    sc:inDistrict mb:OldTown ;
+    sc:hasZoning sc:P ;
+    sc:fronts mb:MainSt_East ;
+    sc:floodZone false ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90205 41.70095, -73.90155 41.70095, -73.90155 41.70145, -73.90205 41.70145, -73.90205 41.70095))"^^geo:wktLiteral ] .
+
+mb:Library a sc:CivicBuilding ;
+    sc:name "Millbrook Public Library" ;
+    sc:locatedOn mb:Parcel_Library ;
+    sc:inDistrict mb:OldTown ;
+    sc:fronts mb:MainSt_East ;
+    sc:floorAreaSqm 900.0 ;
+    sc:storeys 2 ;
+    sc:heightM 9.0 ;
+    sc:yearBuilt "1924"^^xsd:gYear ;
+    sc:dwellingUnits 0 ;
+    sc:connectedTo mb:PowerGrid , mb:WaterSupply ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90195 41.70105, -73.90165 41.70105, -73.90165 41.70135, -73.90195 41.70135, -73.90195 41.70105))"^^geo:wktLiteral ] .
+
+mb:Parcel_MainStBlock a sc:Parcel ;
+    sc:inDistrict mb:OldTown ;
+    sc:hasZoning sc:MU ;
+    sc:fronts mb:MainSt_East ;
+    sc:floodZone false ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90105 41.70035, -73.90055 41.70035, -73.90055 41.70085, -73.90105 41.70085, -73.90105 41.70035))"^^geo:wktLiteral ] .
+
+mb:MainStBlock a sc:MixedUseBuilding ;
+    sc:name "12–20 Main Street" ;
+    sc:locatedOn mb:Parcel_MainStBlock ;
+    sc:inDistrict mb:OldTown ;
+    sc:fronts mb:MainSt_East ;
+    sc:floorAreaSqm 3200.0 ;
+    sc:storeys 4 ;
+    sc:heightM 14.0 ;
+    sc:yearBuilt "1911"^^xsd:gYear ;
+    sc:dwellingUnits 24 ;
+    sc:connectedTo mb:PowerGrid , mb:WaterSupply ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90095 41.70045, -73.90065 41.70045, -73.90065 41.70075, -73.90095 41.70075, -73.90095 41.70045))"^^geo:wktLiteral ] .
+
+mb:Parcel_Grocery a sc:Parcel ;
+    sc:inDistrict mb:OldTown ;
+    sc:hasZoning sc:C1 ;
+    sc:fronts mb:MarketSt_North ;
+    sc:floodZone false ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90355 41.70325, -73.90305 41.70325, -73.90305 41.70375, -73.90355 41.70375, -73.90355 41.70325))"^^geo:wktLiteral ] .
+
+mb:Grocery a sc:CommercialBuilding ;
+    sc:name "Millbrook Market grocery" ;
+    sc:locatedOn mb:Parcel_Grocery ;
+    sc:inDistrict mb:OldTown ;
+    sc:fronts mb:MarketSt_North ;
+    sc:floorAreaSqm 1500.0 ;
+    sc:storeys 1 ;
+    sc:heightM 6.0 ;
+    sc:yearBuilt "1987"^^xsd:gYear ;
+    sc:dwellingUnits 0 ;
+    sc:connectedTo mb:PowerGrid , mb:WaterSupply ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90345 41.70335, -73.90315 41.70335, -73.90315 41.70365, -73.90345 41.70365, -73.90345 41.70335))"^^geo:wktLiteral ] .
+
+mb:Parcel_Clinic a sc:Parcel ;
+    sc:inDistrict mb:OldTown ;
+    sc:hasZoning sc:P ;
+    sc:fronts mb:RiverRd_North ;
+    sc:floodZone false ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90125 41.70375, -73.90075 41.70375, -73.90075 41.70425, -73.90125 41.70425, -73.90125 41.70375))"^^geo:wktLiteral ] .
+
+mb:Clinic a sc:CivicBuilding ;
+    sc:name "Millbrook Health Clinic" ;
+    sc:locatedOn mb:Parcel_Clinic ;
+    sc:inDistrict mb:OldTown ;
+    sc:fronts mb:RiverRd_North ;
+    sc:floorAreaSqm 1100.0 ;
+    sc:storeys 2 ;
+    sc:heightM 8.0 ;
+    sc:yearBuilt "2006"^^xsd:gYear ;
+    sc:dwellingUnits 0 ;
+    sc:connectedTo mb:PowerGrid , mb:WaterSupply ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90115 41.70385, -73.90085 41.70385, -73.90085 41.70415, -73.90115 41.70415, -73.90115 41.70385))"^^geo:wktLiteral ] .
+
+mb:Parcel_OakTerrace a sc:Parcel ;
+    sc:inDistrict mb:Northside ;
+    sc:hasZoning sc:R2 ;
+    sc:fronts mb:MarketSt_North ;
+    sc:floodZone false ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90625 41.70225, -73.90575 41.70225, -73.90575 41.70275, -73.90625 41.70275, -73.90625 41.70225))"^^geo:wktLiteral ] .
+
+mb:OakTerrace a sc:ResidentialBuilding ;
+    sc:name "Oak Terrace Apartments" ;
+    sc:locatedOn mb:Parcel_OakTerrace ;
+    sc:inDistrict mb:Northside ;
+    sc:fronts mb:MarketSt_North ;
+    sc:floorAreaSqm 4800.0 ;
+    sc:storeys 4 ;
+    sc:heightM 13.0 ;
+    sc:yearBuilt "1972"^^xsd:gYear ;
+    sc:dwellingUnits 60 ;
+    sc:connectedTo mb:PowerGrid , mb:WaterSupply ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90615 41.70235, -73.90585 41.70235, -73.90585 41.70265, -73.90615 41.70265, -73.90615 41.70235))"^^geo:wktLiteral ] .
+
+mb:Parcel_NorthsideHomes a sc:Parcel ;
+    sc:inDistrict mb:Northside ;
+    sc:hasZoning sc:R1 ;
+    sc:fronts mb:MainSt_West ;
+    sc:floodZone false ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90875 41.70355, -73.90825 41.70355, -73.90825 41.70405, -73.90875 41.70405, -73.90875 41.70355))"^^geo:wktLiteral ] .
+
+mb:NorthsideHomes a sc:ResidentialBuilding ;
+    sc:name "Northside Homes (block 7)" ;
+    sc:locatedOn mb:Parcel_NorthsideHomes ;
+    sc:inDistrict mb:Northside ;
+    sc:fronts mb:MainSt_West ;
+    sc:floorAreaSqm 1450.0 ;
+    sc:storeys 2 ;
+    sc:heightM 7.5 ;
+    sc:yearBuilt "1958"^^xsd:gYear ;
+    sc:dwellingUnits 10 ;
+    sc:connectedTo mb:PowerGrid , mb:WaterSupply ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90865 41.70365, -73.90835 41.70365, -73.90835 41.70395, -73.90865 41.70395, -73.90865 41.70365))"^^geo:wktLiteral ] .
+
+mb:Parcel_Elementary a sc:Parcel ;
+    sc:inDistrict mb:Southgate ;
+    sc:hasZoning sc:P ;
+    sc:fronts mb:MarketSt_South ;
+    sc:floodZone false ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90725 41.69725, -73.90675 41.69725, -73.90675 41.69775, -73.90725 41.69775, -73.90725 41.69725))"^^geo:wktLiteral ] .
+
+mb:Elementary a sc:CivicBuilding ;
+    sc:name "Millbrook Elementary School" ;
+    sc:locatedOn mb:Parcel_Elementary ;
+    sc:inDistrict mb:Southgate ;
+    sc:fronts mb:MarketSt_South ;
+    sc:floorAreaSqm 3600.0 ;
+    sc:storeys 2 ;
+    sc:heightM 9.0 ;
+    sc:yearBuilt "1965"^^xsd:gYear ;
+    sc:dwellingUnits 0 ;
+    sc:connectedTo mb:PowerGrid , mb:WaterSupply ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90715 41.69735, -73.90685 41.69735, -73.90685 41.69765, -73.90715 41.69765, -73.90715 41.69735))"^^geo:wktLiteral ] .
+
+mb:Parcel_FireStation a sc:Parcel ;
+    sc:inDistrict mb:Southgate ;
+    sc:hasZoning sc:P ;
+    sc:fronts mb:MainSt_West ;
+    sc:floodZone false ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90475 41.69905, -73.90425 41.69905, -73.90425 41.69955, -73.90475 41.69955, -73.90475 41.69905))"^^geo:wktLiteral ] .
+
+mb:FireStation a sc:CivicBuilding ;
+    sc:name "Fire Station 1" ;
+    sc:locatedOn mb:Parcel_FireStation ;
+    sc:inDistrict mb:Southgate ;
+    sc:fronts mb:MainSt_West ;
+    sc:floorAreaSqm 750.0 ;
+    sc:storeys 1 ;
+    sc:heightM 7.0 ;
+    sc:yearBuilt "1990"^^xsd:gYear ;
+    sc:dwellingUnits 0 ;
+    sc:connectedTo mb:PowerGrid , mb:WaterSupply ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90465 41.69915, -73.90435 41.69915, -73.90435 41.69945, -73.90465 41.69945, -73.90465 41.69915))"^^geo:wktLiteral ] .
+
+mb:Parcel_SouthgateCottages a sc:Parcel ;
+    sc:inDistrict mb:Southgate ;
+    sc:hasZoning sc:R1 ;
+    sc:fronts mb:MainSt_West ;
+    sc:floodZone false ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90905 41.69595, -73.90855 41.69595, -73.90855 41.69645, -73.90905 41.69645, -73.90905 41.69595))"^^geo:wktLiteral ] .
+
+mb:SouthgateCottages a sc:ResidentialBuilding ;
+    sc:name "Southgate Cottages" ;
+    sc:locatedOn mb:Parcel_SouthgateCottages ;
+    sc:inDistrict mb:Southgate ;
+    sc:fronts mb:MainSt_West ;
+    sc:floorAreaSqm 1300.0 ;
+    sc:storeys 1 ;
+    sc:heightM 5.0 ;
+    sc:yearBuilt "2015"^^xsd:gYear ;
+    sc:dwellingUnits 12 ;
+    sc:connectedTo mb:PowerGrid , mb:WaterSupply ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90895 41.69605, -73.90865 41.69605, -73.90865 41.69635, -73.90895 41.69635, -73.90895 41.69605))"^^geo:wktLiteral ] .
+
+mb:Parcel_OldMill a sc:Parcel ;
+    sc:inDistrict mb:Riverside ;
+    sc:hasZoning sc:I1 ;
+    sc:fronts mb:RiverRd_South ;
+    sc:floodZone true ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90145 41.69895, -73.90095 41.69895, -73.90095 41.69945, -73.90145 41.69945, -73.90145 41.69895))"^^geo:wktLiteral ] .
+
+mb:OldMill a sc:IndustrialBuilding ;
+    sc:name "Old Mill Workshops" ;
+    sc:locatedOn mb:Parcel_OldMill ;
+    sc:inDistrict mb:Riverside ;
+    sc:fronts mb:RiverRd_South ;
+    sc:floorAreaSqm 2600.0 ;
+    sc:storeys 3 ;
+    sc:heightM 12.0 ;
+    sc:yearBuilt "1871"^^xsd:gYear ;
+    sc:dwellingUnits 0 ;
+    sc:connectedTo mb:PowerGrid , mb:WaterSupply ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.90135 41.69905, -73.90105 41.69905, -73.90105 41.69935, -73.90135 41.69935, -73.90135 41.69905))"^^geo:wktLiteral ] .
+
+mb:Parcel_Warehouse a sc:Parcel ;
+    sc:inDistrict mb:Eastbank ;
+    sc:hasZoning sc:I1 ;
+    sc:fronts mb:MillLane ;
+    sc:floodZone true ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.89575 41.69725, -73.89525 41.69725, -73.89525 41.69775, -73.89575 41.69775, -73.89575 41.69725))"^^geo:wktLiteral ] .
+
+mb:Warehouse a sc:IndustrialBuilding ;
+    sc:name "Eastbank Warehouse" ;
+    sc:locatedOn mb:Parcel_Warehouse ;
+    sc:inDistrict mb:Eastbank ;
+    sc:fronts mb:MillLane ;
+    sc:floorAreaSqm 5200.0 ;
+    sc:storeys 1 ;
+    sc:heightM 9.0 ;
+    sc:yearBuilt "1999"^^xsd:gYear ;
+    sc:dwellingUnits 0 ;
+    sc:connectedTo mb:PowerGrid , mb:WaterSupply ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.89565 41.69735, -73.89535 41.69735, -73.89535 41.69765, -73.89565 41.69765, -73.89565 41.69735))"^^geo:wktLiteral ] .
+
+# ---------------------------------------------------------------
+#  Utility assets
+# ---------------------------------------------------------------
+mb:Parcel_Utilities a sc:Parcel ;
+    sc:inDistrict mb:Eastbank ;
+    sc:hasZoning sc:I1 ;
+    sc:fronts mb:MillLane ;
+    sc:floodZone false ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.896 41.702, -73.8945 41.702, -73.8945 41.7045, -73.896 41.7045, -73.896 41.702))"^^geo:wktLiteral ] .
+
+mb:WaterTreatment a sc:WaterTreatmentPlant ;
+    sc:name "Mill River Water Treatment Plant" ;
+    sc:partOf mb:Parcel_Utilities ;
+    sc:inDistrict mb:Eastbank ;
+    sc:capacityM3PerDay 2500.0 ;
+    sc:feeds mb:WaterSupply ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.8957 41.7035, -73.8953 41.7035, -73.8953 41.7039, -73.8957 41.7039, -73.8957 41.7035))"^^geo:wktLiteral ] .
+
+mb:Substation a sc:Substation ;
+    sc:name "Eastbank Substation" ;
+    sc:partOf mb:Parcel_Utilities ;
+    sc:inDistrict mb:Eastbank ;
+    sc:capacityKVA 12000.0 ;
+    sc:feeds mb:PowerGrid ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POLYGON((-73.8953 41.7024, -73.8951 41.7024, -73.8951 41.7026, -73.8953 41.7026, -73.8953 41.7024))"^^geo:wktLiteral ] .
+
+mb:WaterTower a sc:WaterTower ;
+    sc:name "Northside Water Tower" ;
+    sc:inDistrict mb:Northside ;
+    sc:capacityM3PerDay 800.0 ;
+    sc:feeds mb:WaterSupply ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POINT(-73.9095 41.7045)"^^geo:wktLiteral ] .
+
+# ---------------------------------------------------------------
+#  Services (functions hosted by buildings)
+# ---------------------------------------------------------------
+mb:TownAdministration a sc:GovernmentService ;
+    sc:name "Town administration" ;
+    sc:hostedBy mb:TownHall ;
+    sc:servesArea mb:Northside , mb:OldTown , mb:Southgate , mb:Riverside , mb:Eastbank .
+
+mb:PoliceDesk a sc:PoliceService ;
+    sc:name "Millbrook Police" ;
+    sc:hostedBy mb:TownHall ;
+    sc:capacity 8 ;
+    sc:servesArea mb:Northside , mb:OldTown , mb:Southgate , mb:Riverside , mb:Eastbank .
+
+mb:LibraryService a sc:CulturalService ;
+    sc:name "Public library" ;
+    sc:hostedBy mb:Library ;
+    sc:capacity 80 ;
+    sc:servesArea mb:Northside , mb:OldTown , mb:Southgate , mb:Riverside , mb:Eastbank .
+
+mb:PrimaryCare a sc:HealthService ;
+    sc:name "Primary care clinic" ;
+    sc:hostedBy mb:Clinic ;
+    sc:capacity 12 ;
+    sc:servesArea mb:Northside , mb:OldTown , mb:Southgate , mb:Riverside , mb:Eastbank .
+
+mb:PrimarySchool a sc:EducationService ;
+    sc:name "Elementary education (K–5)" ;
+    sc:hostedBy mb:Elementary ;
+    sc:capacity 320 ;
+    sc:servesArea mb:Northside , mb:OldTown , mb:Southgate , mb:Riverside , mb:Eastbank .
+
+mb:FireRescue a sc:FireService ;
+    sc:name "Fire and rescue" ;
+    sc:hostedBy mb:FireStation ;
+    sc:capacity 3 ;
+    sc:servesArea mb:Northside , mb:OldTown , mb:Southgate , mb:Riverside , mb:Eastbank .
+
+mb:GroceryRetail a sc:RetailService ;
+    sc:name "Grocery retail" ;
+    sc:hostedBy mb:Grocery ;
+    sc:servesArea mb:Northside , mb:OldTown , mb:Southgate , mb:Riverside .
+
+mb:MainStShops a sc:RetailService ;
+    sc:name "Main Street shops" ;
+    sc:hostedBy mb:MainStBlock ;
+    sc:servesArea mb:OldTown , mb:Riverside .
+
+# ---------------------------------------------------------------
+#  Public transit
+# ---------------------------------------------------------------
+mb:Stop_MarketMain a sc:TransitStop ;
+    sc:name "Market & Main" ;
+    sc:inDistrict mb:OldTown ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POINT(-73.9042 41.7002)"^^geo:wktLiteral ] .
+
+mb:Stop_Northside a sc:TransitStop ;
+    sc:name "Northside / Oak Terrace" ;
+    sc:inDistrict mb:Northside ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POINT(-73.9042 41.703)"^^geo:wktLiteral ] .
+
+mb:Stop_Southgate a sc:TransitStop ;
+    sc:name "Southgate / School" ;
+    sc:inDistrict mb:Southgate ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POINT(-73.9042 41.6972)"^^geo:wktLiteral ] .
+
+mb:Stop_Riverside a sc:TransitStop ;
+    sc:name "Riverside Park" ;
+    sc:inDistrict mb:Riverside ;
+    geo:hasGeometry [ a geo:Geometry ; geo:asWKT "POINT(-73.8982 41.698)"^^geo:wktLiteral ] .
+
+mb:Route1 a sc:TransitRoute ;
+    sc:name "Route 1 Town Loop" ;
+    sc:headwayMin 30 ;
+    sc:servesStop mb:Stop_Northside , mb:Stop_MarketMain , mb:Stop_Southgate , mb:Stop_Riverside .
+
+# Nearest-stop accessibility links
+mb:TownHall sc:nearestStop mb:Stop_MarketMain .
+mb:Library sc:nearestStop mb:Stop_MarketMain .
+mb:MainStBlock sc:nearestStop mb:Stop_MarketMain .
+mb:Grocery sc:nearestStop mb:Stop_Northside .
+mb:Clinic sc:nearestStop mb:Stop_MarketMain .
+mb:OakTerrace sc:nearestStop mb:Stop_Northside .
+mb:NorthsideHomes sc:nearestStop mb:Stop_Northside .
+mb:Elementary sc:nearestStop mb:Stop_Southgate .
+mb:FireStation sc:nearestStop mb:Stop_MarketMain .
+mb:SouthgateCottages sc:nearestStop mb:Stop_Southgate .
+mb:OldMill sc:nearestStop mb:Stop_Riverside .
+mb:Warehouse sc:nearestStop mb:Stop_Riverside .
