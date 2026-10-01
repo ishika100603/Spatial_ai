@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Neighborhood — Food Delivery Semantic Model</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="scene"></div>
+
+  <header id="toolbar">
+    <div class="brand"><span class="logo">Uber<b>Eats</b></span><span class="sub">Neighborhood · semantic model</span></div>
+    <div class="group" aria-label="Actions">
+      <span class="group-title">Actions</span>
+      <button data-action="profile" title="Profile / account creation">👤 <span>Create account</span></button>
+      <button data-action="order" title="Receiving orders">🧾 <span>Receive order</span></button>
+      <button data-action="payment" title="Receiving payment">💳 <span>Receive payment</span><i class="badge" id="unpaidBadge" hidden></i></button>
+      <button data-action="chat" title="Chatbots / assistance">💬 <span>Assistant</span></button>
+    </div>
+    <div class="group" aria-label="Model">
+      <span class="group-title">Model</span>
+      <button data-action="restaurant" title="Add a restaurant (UberEats — Partner with → Restaurant)">🏪 <span>Partner restaurant</span></button>
+      <button data-action="partner" title="Add a delivery partner">🛵 <span>Add partner</span></button>
+    </div>
+    <div class="group" aria-label="View">
+      <span class="group-title">View</span>
+      <button data-action="relations" class="toggle on" title="Show relationships">🔗 <span>Relations</span></button>
+      <button data-action="labels" class="toggle on" title="Show labels">🏷️ <span>Labels</span></button>
+      <button data-action="auto" class="toggle" title="Automatically generate customer activity">✨ <span>Auto demo</span></button>
+      <button data-action="pause" class="toggle" title="Pause the simulation">⏸ <span>Pause</span></button>
+      <button data-action="view" title="Reset camera">🎥</button>
+    </div>
+  </header>
+
+  <aside id="left" class="panel">
+    <button class="collapse" data-collapse="left" title="Collapse">‹</button>
+    <section>
+      <h2>Semantic model</h2>
+      <div class="diagram">
+        <span class="node n-partner" data-focus="partner">Delivery Partner</span>
+        <span class="edge e-drives">Drives to ►</span>
+        <span class="node n-rest" data-focus="restaurant">Restaurant</span>
+        <span class="edge e-partner">◄ Partner with</span>
+        <span class="node n-ue" data-focus="hq">UberEats</span>
+      </div>
+      <div id="counts" class="counts"></div>
+    </section>
+    <section>
+      <h2>Rules</h2>
+      <div class="rule" id="rule1">
+        <h3><span class="num">1</span> Confidentiality of customer details</h3>
+        <p>Each entity only sees the customer information it needs.</p>
+        <div class="roles" id="roleChips"></div>
+        <div id="matrix"></div>
+      </div>
+      <div class="rule" id="rule2">
+        <h3><span class="num">2</span> Delivery time</h3>
+        <p>Every active order must have an estimated delivery time, updated as it moves forward.</p>
+        <div id="rule2status"></div>
+      </div>
+    </section>
+    <section class="hint">Click buildings, vehicles or orders to inspect them. Drag to orbit, scroll to zoom.</section>
+  </aside>
+
+  <aside id="right" class="panel">
+    <button class="collapse" data-collapse="right" title="Collapse">›</button>
+    <section>
+      <h2>Active orders <span id="orderCount" class="pill"></span></h2>
+      <div id="orders"></div>
+    </section>
+    <section id="inspectorWrap">
+      <h2>Inspector</h2>
+      <div id="inspector"><p class="muted">Select an entity or an order.</p></div>
+    </section>
+  </aside>
+
+  <div id="chat" class="panel" hidden>
+    <header>
+      <b>💬 UberEats Assistant</b>
+      <select id="chatAs" title="Chatting as"></select>
+      <button class="x" data-close-chat>✕</button>
+    </header>
+    <div id="chatLog"></div>
+    <div class="chips" id="chatChips"></div>
+    <form id="chatForm"><input id="chatInput" placeholder="Ask about your order, delivery time…" autocomplete="off" /><button>Send</button></form>
+  </div>
+
+  <div id="log"></div>
+
+  <div id="modal" hidden>
+    <form class="dialog" id="modalForm">
+      <header><h2 id="modalTitle"></h2><button type="button" class="x" data-close-modal>✕</button></header>
+      <div id="modalBody"></div>
+      <p class="error" id="modalError"></p>
+      <footer><button type="button" data-close-modal>Cancel</button><button type="submit" class="primary" id="modalOk">OK</button></footer>
+    </form>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
