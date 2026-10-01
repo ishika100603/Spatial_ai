@@ -11,6 +11,7 @@ Delivery Partner ──── Drives to ────► Restaurant ◄───�
 ## Entities
 
 ### Delivery Partner
+
 | Attribute    | Description                     | Example values      |
 |--------------|---------------------------------|---------------------|
 | Rating       | Partner's customer rating       | 4.8 / 5             |
@@ -18,12 +19,14 @@ Delivery Partner ──── Drives to ────► Restaurant ◄───�
 | Tips         | Tips the partner has earned     | $12.50              |
 
 ### Restaurant
+
 | Attribute    | Description                     | Example values                          |
 |--------------|---------------------------------|-----------------------------------------|
 | Cuisine type | Kind of food served             | Asian, Thai, Indian, Chinese, …         |
 | Store type   | Kind of establishment           | Food Truck, Fine Dining, …              |
 
 ### UberEats
+
 | Attribute      | Description                          | Example values             |
 |----------------|--------------------------------------|----------------------------|
 | Service charge | Fee charged for the delivery service | $3.99                      |
