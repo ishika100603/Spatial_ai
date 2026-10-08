@@ -54,3 +54,35 @@ Delivery Partner ──── Drives to ────► Restaurant ◄───�
 | Receiving orders           | The restaurant receives a new order from a customer                 |
 | Chatbots / assistance      | Customers can ask about order status, delivery time, etc.           |
 | Profile / account creation | Customers create an account (name, email, phone, membership)        |
+
+## Location (Morningside Heights, around Columbia University)
+
+The model is placed on the real street grid from W 108th to W 120th St, between Riverside Dr and Manhattan Ave.
+The main object is the **food parcel**, and places are named by **street & avenue junctions**.
+
+| Entity           | Location |
+|------------------|----------|
+| Indian Kitchen   | Broadway between W 111th & W 112th St (east side) |
+| Thai Leaf        | Amsterdam Ave between W 110th & W 111th St (west side) |
+| Wok on Wheels    | Food truck on Broadway between W 115th & W 116th St, by the Columbia gates |
+| Trattoria Roma   | Amsterdam Ave between W 113th & W 114th St (east side) |
+| Priya (C01)      | W 118th St between Amsterdam Ave & Morningside Dr |
+| Food parcel      | Wherever its container is: the kitchen → the rider's bag → the customer's door |
+| UberEats         | No physical place: it is present as the sticker in each partner's window |
+
+The four location questions the model answers:
+
+1. **Given a referent, what is its location?** "Where is parcel O01?" → *in DP01's bag, on Amsterdam Ave between W 116th & W 117th St*.
+2. **Given a location, what is occupying it?** "What is at Broadway & W 112th St?" → *Indian Kitchen, parcel O01, 4 pedestrians*.
+3. **Given a frame of reference, where is an occupant?** The same parcel can be described on the street grid, from a landmark ("4½ blocks south of the Columbia Main Gates"), from the customer's door, from the rider's own point of view ("110 m straight ahead") or as latitude/longitude.
+4. **Given a description, infer a specific location.** "The Indian place near the cathedral" → *Indian Kitchen, Broadway & W 112th St*.
+
+## Time
+
+Time is the second determining factor. Each restaurant has a **preparation time** and each delivery partner a **speed** for their commute type; routes follow real streets (Columbia's campus, Barnard, the Cathedral and Morningside Park block some of them). So:
+
+```
+estimated delivery = cooking time left + rider's time to the restaurant + ride to the customer + hand-off
+```
+
+The rider is dispatched so they reach the restaurant just as the food is ready.
