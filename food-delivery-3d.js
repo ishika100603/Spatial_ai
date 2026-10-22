@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createCity, textSprite } from './food-delivery-city.js?v=5';
+import { createCity, textSprite } from './food-delivery-city.js?v=6';
 import {
   AVENUES, STREETS, BLOCK, LANDMARKS, streetZ, streetShort, junction, route, describe, relativeTo,
-  nearestLandmark, egocentric, toLatLon, parsePlace, nearestJunction, avenue,
-} from './food-delivery-location.js?v=5';
+  nearestLandmark, egocentric, toLatLon, parsePlace, nearestJunction, avenue, CLOSURES, NODES, edgeById, streetWidth,
+} from './food-delivery-location.js?v=6';
+import { createDistancePanel, PRESET_CLOSURES } from './food-delivery-distance.js?v=6';
 
 // ===========================================================================
 // 1. Semantic data — entities, attributes, relationships (no Three.js here)
@@ -1175,6 +1176,154 @@ function startIdleRuns() {
   }
 }
 
+// ===========================================================================
+// 8. Distance: three pickup → delivery routes, a 2D plan, and road closures
+// ===========================================================================
+// The three delivery jobs shown on the plan (pickup restaurant → customer door).
+const JOBS = [
+  { id: 'J1', pickup: 'R01', delivery: 'C01', rider: 'DP01' },
+  { id: 'J2', pickup: 'R02', delivery: 'C03', rider: 'DP02' },
+  { id: 'J3', pickup: 'R03', delivery: 'C02', rider: 'DP03' },
+];
+const DEFAULT_CLOSURES = [PRESET_CLOSURES[0]];
+const resetClosures = () => { CLOSURES.clear(); DEFAULT_CLOSURES.forEach((c) => CLOSURES.set(c.id, c.reason)); };
+resetClosures();
+
+const distGroup = new THREE.Group(); // job routes + P/D pins (visible in distance mode)
+const closureGroup = new THREE.Group(); // barricades (always visible — they are part of the street)
+scene.add(distGroup, closureGroup);
+
+const stripeTex = (() => {
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 32;
+  const g = c.getContext('2d');
+  g.fillStyle = '#fff';
+  g.fillRect(0, 0, 128, 32);
+  g.fillStyle = '#f26b1d';
+  for (let x = -32; x < 160; x += 32) { g.beginPath(); g.moveTo(x, 32); g.lineTo(x + 16, 32); g.lineTo(x + 48, 0); g.lineTo(x + 32, 0); g.fill(); }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = THREE.RepeatWrapping;
+  return t;
+})();
+
+function ribbonMesh(points, color, width, y, opacity = 0.95) {
+  const pos = [], uv = [], idx = [];
+  let acc = 0;
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1], b = points[i];
+    const L = Math.hypot(b.x - a.x, b.z - a.z);
+    if (L < 0.01) continue;
+    const nx = (-(b.z - a.z) / L) * width, nz = ((b.x - a.x) / L) * width;
+    const k = pos.length / 3;
+    pos.push(a.x + nx, y, a.z + nz, a.x - nx, y, a.z - nz, b.x - nx, y, b.z - nz, b.x + nx, y, b.z + nz);
+    uv.push(acc / 6, 1, acc / 6, 0, (acc + L) / 6, 0, (acc + L) / 6, 1);
+    idx.push(k, k + 1, k + 2, k, k + 2, k + 3);
+    acc += L;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  const map = routeTex.clone();
+  map.needsUpdate = true;
+  const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: new THREE.Color(color), map, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide }));
+  mesh.renderOrder = 4;
+  return mesh;
+}
+
+function barricade(e) {
+  const g = new THREE.Group();
+  const A = NODES.get(e.a), B = NODES.get(e.b);
+  const along = A.x === B.x ? 'z' : 'x';
+  const width = along === 'z' ? avenue(A.ave).w : streetWidth(A.n);
+  const len = Math.hypot(B.x - A.x, B.z - A.z);
+  // red wash along the closed block
+  const wash = new THREE.Mesh(new THREE.PlaneGeometry(along === 'x' ? len - 30 : width - 2, along === 'z' ? len - 30 : width - 2), new THREE.MeshBasicMaterial({ color: 0xd62d20, transparent: true, opacity: 0.28, depthWrite: false }));
+  wash.rotation.x = -Math.PI / 2;
+  wash.position.set((A.x + B.x) / 2, 0.3, (A.z + B.z) / 2);
+  g.add(wash);
+  const barMat = new THREE.MeshStandardMaterial({ map: stripeTex, roughness: 0.6 });
+  const legMat = m(0xf2f2f2);
+  const coneMat = m(0xf26b1d);
+  for (const end of [A, B]) {
+    const dir = end === A ? 1 : -1; // inwards along the segment
+    const crossW = width - 2;
+    const cx = along === 'x' ? end.x + dir * 15 : end.x;
+    const cz = along === 'z' ? end.z + dir * 15 : end.z;
+    const board = new THREE.Mesh(new THREE.BoxGeometry(along === 'z' ? crossW : 0.25, 0.5, along === 'x' ? crossW : 0.25), barMat);
+    board.position.set(cx, 1.1, cz);
+    board.castShadow = true;
+    g.add(board);
+    const board2 = board.clone();
+    board2.position.y = 0.45;
+    g.add(board2);
+    for (let k = -1; k <= 1; k += 2) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.4, 0.15), legMat);
+      leg.position.set(cx + (along === 'z' ? k * crossW * 0.45 : 0), 0.7, cz + (along === 'x' ? k * crossW * 0.45 : 0));
+      g.add(leg);
+    }
+    for (let c = -2; c <= 2; c++) {
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.9, 10), coneMat);
+      cone.position.set(cx + (along === 'z' ? c * crossW * 0.2 : dir * 3), 0.45, cz + (along === 'x' ? c * crossW * 0.2 : dir * 3));
+      g.add(cone);
+    }
+  }
+  const why = textSprite(`⛔ CLOSED · ${CLOSURES.get(e.id)}`, { color: '#fff', bg: '#d62d20', size: 0.019 });
+  why.position.set((A.x + B.x) / 2, 7, (A.z + B.z) / 2);
+  g.add(why);
+  return g;
+}
+
+let distanceMode = true;
+function onDistanceChange(routes) {
+  distGroup.clear();
+  routes.forEach((r) => {
+    const off = (r.i - 1) * 6; // side-by-side when routes share a street
+    const shifted = r.actual.points.map((p) => P(p.x + off, p.z + off));
+    distGroup.add(ribbonMesh(shifted, r.color, 3.6, 0.42 + r.i * 0.02));
+    for (const [pt, tag, col] of [[r.P, `P${r.i + 1}`, '#1d1d1f'], [r.D, `D${r.i + 1}`, '#7c3aed']]) {
+      const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 14, 8), m(col === '#1d1d1f' ? 0x1d1d1f : 0x7c3aed));
+      pin.position.set(pt.x, 7, pt.z);
+      distGroup.add(pin);
+      const lab = textSprite(`${tag} · ${byId(tag.startsWith('P') ? r.job.pickup : r.job.delivery).name}`, { color: '#fff', bg: col, size: 0.02 });
+      lab.position.set(pt.x, 15.5, pt.z);
+      distGroup.add(lab);
+    }
+  });
+  distGroup.visible = distanceMode;
+  closureGroup.clear();
+  for (const id of CLOSURES.keys()) { const e = edgeById(id); if (e) closureGroup.add(barricade(e)); }
+  // riders already on the road re-plan around the closures
+  for (const dp of model.deliveryPartners) {
+    const t = trips.get(dp.id);
+    if (!t) continue;
+    const before = t.len - t.s;
+    const r = startTrip(dp, t.target, t.purpose, t.order);
+    if (r.length > before + 20) toast(`${dp.id} re-routed around the closure: +${Math.round(r.length - before)} m.`, 'warn');
+  }
+}
+
+const distEl = root.querySelector('.fd-dist');
+const distance = createDistancePanel(distEl, {
+  jobs: () => JOBS.map((j) => ({ ...j, mode: byId(j.rider).commuteType })),
+  anchorOf, byId, SPEED, HANDOFF,
+  riders: () => model.deliveryPartners,
+  onChange: onDistanceChange,
+});
+
+function setLeftMode(mode) {
+  root.classList.toggle('fd-mode-distance', mode === 'distance');
+  root.classList.toggle('fd-mode-locate', mode === 'locate');
+  root.classList.toggle('fd-hide-loc', mode === 'none');
+  distanceMode = mode === 'distance';
+  distGroup.visible = distanceMode;
+  root.querySelector('[data-tool=distance]').classList.toggle('on', mode === 'distance');
+  root.querySelector('[data-tool=locate]').classList.toggle('on', mode === 'locate');
+  if (distanceMode) distance.refresh(true);
+}
+
 // --- Toolbar ---------------------------------------------------------------------
 root.querySelector('.fd-toolbar').addEventListener('click', (ev) => {
   const b = ev.target.closest('button');
@@ -1184,9 +1333,8 @@ root.querySelector('.fd-toolbar').addEventListener('click', (ev) => {
     showRoutes = !showRoutes;
     ribbons.forEach((r) => (r.visible = showRoutes));
     b.classList.toggle('on', showRoutes);
-  } else if (a === 'locate') {
-    root.classList.toggle('fd-hide-loc');
-    b.classList.toggle('on', !root.classList.contains('fd-hide-loc'));
+  } else if (a === 'locate' || a === 'distance') {
+    setLeftMode(b.classList.contains('on') ? 'none' : a);
   } else if (a === 'reset') {
     resetAll();
     toast('Model reset to the initial example.');
@@ -1214,8 +1362,10 @@ function resetAll() {
   loc.herePoint = null;
   loc.result = null;
   loc.text = '';
+  resetClosures();
   buildEntities();
   startIdleRuns();
+  distance.refresh(true);
   render();
   renderLocTab();
   fly = { fromT: controls.target.clone(), toT: HOME.target.clone(), fromP: camera.position.clone(), toP: HOME.pos.clone(), k: 0 };
@@ -1243,7 +1393,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   if (raycaster.ray.intersectPlane(groundPlane, p)) {
     loc.herePoint = P(p.x, p.z);
     locTab = 'here';
-    root.classList.remove('fd-hide-loc');
+    setLeftMode('locate');
     renderLocTab();
     select(null);
   }
@@ -1291,6 +1441,7 @@ function tick() {
     rings[i].scale.setScalar(1 + 0.08 * Math.sin(t * 4));
   });
   ribbons.forEach((r) => (r.material.map.offset.x -= dt * 0.8));
+  distGroup.children.forEach((c) => c.material?.map && c.isMesh && c.geometry.attributes.uv && (c.material.map.offset.x -= dt * 0.6));
   marker.material.opacity = 0.35 + 0.25 * Math.sin(t * 3);
 
   if (follow) {
@@ -1314,6 +1465,7 @@ function tick() {
   if (uiTimer > 0.4) {
     uiTimer = 0;
     render();
+    if (distanceMode) distance.refresh();
     if (!locBody.matches(':hover') && !locBody.contains(document.activeElement)) updateLocOut();
     const o0 = model.orders.find((o) => o.id === 'O01');
     labels.forEach((l, id) => {
@@ -1339,5 +1491,7 @@ buildEntities();
 startIdleRuns();
 render();
 renderLocTab();
+setLeftMode('distance');
+onDistanceChange(distance.routes());
 resize();
 tick();

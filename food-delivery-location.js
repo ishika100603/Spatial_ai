@@ -70,7 +70,9 @@ export const LANDMARKS = [
 
 // --- Road graph -----------------------------------------------------------
 export const NODES = new Map(); // key -> { key, ave, n, x, z, name }
-export const EDGES = []; // { a, b, kind, len, road }
+export const EDGES = []; // { id, a, b, kind, len, road }
+// Road closures: edge id -> reason. Routing avoids closed segments (a de-route).
+export const CLOSURES = new Map();
 
 const nodeKey = (aveId, n) => `${aveId}@${n}`;
 export function junction(aveId, n) {
@@ -87,7 +89,7 @@ export function junction(aveId, n) {
     for (let n = ave.from; n < ave.to; n++) {
       const a = add(ave, n);
       const b = add(ave, n + 1);
-      EDGES.push({ a: a.key, b: b.key, kind: 'road', len: BLOCK, road: ave.name });
+      EDGES.push({ id: `${a.key}|${b.key}`, a: a.key, b: b.key, kind: 'road', len: BLOCK, road: ave.name, label: `${ave.name} between ${streetShort(n)} & ${streetShort(n + 1)}` });
     }
   }
   for (const n of STREETS) {
@@ -97,12 +99,26 @@ export function junction(aveId, n) {
       if (!kind) continue;
       const a = add(aves[i], n);
       const b = add(aves[i + 1], n);
-      EDGES.push({ a: a.key, b: b.key, kind, len: aves[i + 1].x - aves[i].x, road: kind === 'ped' ? (n === 116 && aves[i].id === 'broadway' ? 'College Walk' : `${streetShort(n)} (stairs/path)`) : streetName(n) });
+      const road = kind === 'ped' ? (n === 116 && aves[i].id === 'broadway' ? 'College Walk' : `${streetShort(n)} (stairs/path)`) : streetName(n);
+      EDGES.push({ id: `${a.key}|${b.key}`, a: a.key, b: b.key, kind, len: aves[i + 1].x - aves[i].x, road, label: `${kind === 'ped' ? road : streetShort(n)} between ${aves[i].name} & ${aves[i + 1].name}` });
     }
   }
 })();
 
-const allowed = (kind, mode) => kind === 'road' || (kind === 'ped' && mode === 'Walking');
+const kindOk = (kind, mode) => kind === 'road' || (kind === 'ped' && mode === 'Walking');
+let ignoreClosures = false;
+const allowed = (e, mode) => kindOk(e.kind, mode) && (ignoreClosures || !CLOSURES.has(e.id));
+
+// The road segment nearest a point (used to place closures by clicking the plan).
+export function nearestEdge(p) {
+  let best = null;
+  for (const e of EDGES) {
+    const pr = project(p, e);
+    if (!best || pr.d < best.d) best = { ...pr, edge: e };
+  }
+  return best;
+}
+export const edgeById = (id) => EDGES.find((e) => e.id === id);
 
 function project(p, e) {
   const A = NODES.get(e.a);
@@ -118,7 +134,7 @@ function project(p, e) {
 export function snapToRoad(p, mode = 'Car') {
   let best = null;
   for (const e of EDGES) {
-    if (!allowed(e.kind, mode)) continue;
+    if (!allowed(e, mode)) continue;
     const pr = project(p, e);
     if (!best || pr.d < best.d) best = { ...pr, edge: e };
   }
@@ -126,9 +142,19 @@ export function snapToRoad(p, mode = 'Car') {
 }
 
 // Shortest route along the street network. Returns { points, length, steps }.
-export function route(from, to, mode = 'Car') {
+// With { ignoreClosures: true } it returns the ideal route as if every street were open.
+export function route(from, to, mode = 'Car', opts = {}) {
+  ignoreClosures = !!opts.ignoreClosures;
+  try { return routeInner(from, to, mode); } finally { ignoreClosures = false; }
+}
+
+function routeInner(from, to, mode) {
+  // Endpoints may sit on a closed block: local access to the door is still allowed.
+  const saved = ignoreClosures;
+  ignoreClosures = true;
   const s = snapToRoad(from, mode);
   const g = snapToRoad(to, mode);
+  ignoreClosures = saved;
   const startPt = { x: s.x, z: s.z };
   const goalPt = { x: g.x, z: g.z };
   let nodePath = [];
@@ -148,7 +174,7 @@ export function route(from, to, mode = 'Car') {
       if (dist.get(u) === Infinity) break;
       q.delete(u);
       for (const e of EDGES) {
-        if (!allowed(e.kind, mode)) continue;
+        if (!allowed(e, mode)) continue;
         const v = e.a === u ? e.b : e.b === u ? e.a : null;
         if (!v || !q.has(v)) continue;
         const alt = dist.get(u) + e.len;
@@ -236,6 +262,15 @@ export function describe(x, z) {
     text = `on ${streetName(n)} ${between} (${side})`;
   }
   return { text, junction: j, zone: zone && zone.name, latlon: toLatLon(x, z) };
+}
+
+// How far apart two places are on the grid: streets (uptown/downtown) and avenues (crosstown).
+export function separation(p, q) {
+  const streets = Math.round((Math.abs(p.z - q.z) / BLOCK) * 2) / 2;
+  const lo = Math.min(p.x, q.x), hi = Math.max(p.x, q.x);
+  const nMid = 114 - (p.z + q.z) / 2 / BLOCK;
+  const crossed = AVENUES.filter((a) => a.x > lo + 2 && a.x < hi - 2 && nMid >= a.from - 1 && nMid <= a.to + 1);
+  return { streets, avenues: crossed.length, avenueNames: crossed.map((a) => a.name), crosstown: hi - lo, straight: Math.hypot(p.x - q.x, p.z - q.z) };
 }
 
 // --- Frames of reference ----------------------------------------------------

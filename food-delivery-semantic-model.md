@@ -86,3 +86,24 @@ estimated delivery = cooking time left + rider's time to the restaurant + ride t
 ```
 
 The rider is dispatched so they reach the restaurant just as the food is ready.
+
+## Distance
+
+Distance is measured on the street grid, not as the crow flies. Three delivery jobs are compared:
+
+| Job | Pickup | Delivery | Usual mode |
+|-----|--------|----------|------------|
+| 1 | P1 Indian Kitchen (Broadway, W 111th–112th) | D1 Priya (W 118th St, Amsterdam–Morningside Dr) | 🛵 Bike |
+| 2 | P2 Thai Leaf (Amsterdam, W 110th–111th) | D2 Ana (Riverside Dr & W 111th St) | 🚗 Car |
+| 3 | P3 Wok on Wheels (Broadway & W 116th St) | D3 Sam (W 113th St, Broadway–Amsterdam) | 🚲 Bicycle |
+
+For each job the model reports:
+
+- **Streets away**: how many blocks uptown/downtown (e.g. 6½).
+- **Avenues away**: how many avenues are crossed (e.g. 1, Amsterdam Ave).
+- **Distance**: metres along the route, compared with the straight line (a detour factor).
+- **Mode of commute and time**: ride time at that mode's city speed, plus hand-off. Walking can use College Walk through campus; vehicles cannot.
+
+Routes are coloured on a **gradient from long (red) to short (green)**.
+
+**Road closures** remove a street segment from the network (for example Broadway between W 114th & W 115th St for a water-main repair). The route is recomputed around it, and the model reports the **de-route**: the extra metres and minutes compared with the fastest route if the street were open. A rider can still reach a door on a closed block (local access).

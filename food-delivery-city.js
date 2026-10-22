@@ -3,7 +3,7 @@
 // St. John the Divine, Riverside and Morningside Parks, the Hudson, traffic and people.
 // Decorative except for the street grid, which comes from the location model.
 import * as THREE from 'three';
-import { AVENUES, BLOCK, streetZ, streetWidth, streetShort, streetSegmentKind, zoneAt, HUDSON_X, PARKWAY_X } from './food-delivery-location.js?v=5';
+import { AVENUES, BLOCK, streetZ, streetWidth, streetShort, streetSegmentKind, zoneAt, HUDSON_X, PARKWAY_X } from './food-delivery-location.js?v=6';
 
 const VIS_STREETS = [];
 for (let n = 101; n <= 127; n++) VIS_STREETS.push(n);
