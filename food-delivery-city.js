@@ -5,9 +5,12 @@
 import * as THREE from 'three';
 import { AVENUES, BLOCK, streetZ, streetWidth, streetShort, streetSegmentKind, zoneAt, HUDSON_X, PARKWAY_X } from './food-delivery-location.js?v=7';
 
+// What is drawn: the site (W 111th–116th, Broadway–Morningside Dr) plus about one block of context.
+const VIS = { x0: -270, x1: 400, z0: streetZ(117.6), z1: streetZ(110) + 16 };
+const inVis = (x, z, m = 12) => x > VIS.x0 - m && x < VIS.x1 + m && z > VIS.z0 - m && z < VIS.z1 + m;
 const VIS_STREETS = [];
-for (let n = 101; n <= 127; n++) VIS_STREETS.push(n);
-const aveVisible = (a, n) => n >= (a.id === 'claremont' ? 116 : 101) && n <= 127;
+for (let n = 110; n <= 118; n++) VIS_STREETS.push(n);
+const aveVisible = (a, n) => n >= 110 && n <= 118;
 const RIVERSIDE_W = -401; // west curb of Riverside Dr
 const CITY_E = 700;
 
@@ -183,7 +186,7 @@ function roadWords(text, length) {
 // Instanced helper: accumulate transforms and colours, then build once.
 class Instances {
   constructor(geometry, material) { this.g = geometry; this.m = material; this.list = []; }
-  add(x, y, z, sx = 1, sy = 1, sz = 1, ry = 0, color = null) { this.list.push({ x, y, z, sx, sy, sz, ry, color }); }
+  add(x, y, z, sx = 1, sy = 1, sz = 1, ry = 0, color = null) { if (inVis(x, z)) this.list.push({ x, y, z, sx, sy, sz, ry, color }); }
   build(scene, { cast = true, receive = true } = {}) {
     if (!this.list.length) return null;
     const mesh = new THREE.InstancedMesh(this.g, this.m, this.list.length);
@@ -238,7 +241,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
   skyScene.add(makeSky());
   scene.environment = pmrem.fromScene(skyScene).texture;
   scene.background = null;
-  scene.fog = new THREE.Fog(0xcfe3f2, 700, 3000);
+  scene.fog = new THREE.Fog(0xcfe3f2, 600, 2200);
   sun.color.set(0xfff0dc);
   sun.intensity = 2.8;
   sun.shadow.mapSize.set(4096, 4096);
@@ -276,12 +279,12 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
   ground.receiveShadow = true;
   scene.add(ground);
 
-  const zN = streetZ(127) - 9;
-  const zS = streetZ(101) + 9;
-  roadTex.repeat.set((CITY_E - RIVERSIDE_W) / 24, (zS - zN) / 24);
-  const asphalt = new THREE.Mesh(new THREE.PlaneGeometry(CITY_E - RIVERSIDE_W + 400, zS - zN), mat(0xffffff, { map: roadTex, roughness: 0.95 }));
+  const zN = VIS.z0 - 20;
+  const zS = VIS.z1 + 20;
+  roadTex.repeat.set((VIS.x1 - VIS.x0 + 40) / 24, (zS - zN) / 24);
+  const asphalt = new THREE.Mesh(new THREE.PlaneGeometry(VIS.x1 - VIS.x0 + 40, zS - zN), mat(0xffffff, { map: roadTex, roughness: 0.95 }));
   asphalt.rotation.x = -Math.PI / 2;
-  asphalt.position.set((RIVERSIDE_W + CITY_E + 400) / 2, 0, (zN + zS) / 2);
+  asphalt.position.set((VIS.x0 + VIS.x1) / 2, 0, (zN + zS) / 2);
   asphalt.receiveShadow = true;
   scene.add(asphalt);
 
@@ -423,16 +426,16 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
   };
 
   // Blocks between each pair of streets and avenues.
-  for (let n = 101; n < 127; n++) {
+  for (let n = 110; n < 118; n++) {
     const zTop = streetZ(n + 1) + streetWidth(n + 1) / 2;
     const zBot = streetZ(n) - streetWidth(n) / 2;
     const aves = AVENUES.filter((a) => aveVisible(a, n) && aveVisible(a, n + 1)).sort((p, q) => p.x - q.x);
-    const bounds = [...aves.map((a) => ({ x: a.x, w: a.w, ave: a })), { x: CITY_E + 10, w: 20, ave: null }];
+    const bounds = [{ x: VIS.x0, w: 0, ave: null }, ...aves.map((a) => ({ x: a.x, w: a.w, ave: a })), { x: VIS.x1 + 10, w: 20, ave: null }];
     for (let i = 0; i < bounds.length - 1; i++) {
       const A = bounds[i], B = bounds[i + 1];
       const x0 = A.x + A.w / 2, x1 = B.x - B.w / 2;
       const zone = zoneAt((x0 + x1) / 2, (zTop + zBot) / 2);
-      if (zone) continue;
+      if (zone || !inVis((x0 + x1) / 2, (zTop + zBot) / 2, 0)) continue;
       fillBlock(x0, x1, zTop, zBot, A.ave, B.ave);
     }
   }
@@ -494,14 +497,14 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
 
   // Avenues: medians, lane lines, lamps, painted names.
   for (const a of AVENUES) {
-    for (let n = 101; n < 127; n++) {
+    for (let n = 110; n < 118; n++) {
       if (!aveVisible(a, n) || !aveVisible(a, n + 1)) continue;
       const za = streetZ(n + 1) + streetWidth(n + 1) / 2 + 6;
       const zb = streetZ(n) - streetWidth(n) / 2 - 6;
       const L = zb - za;
       const zc = (za + zb) / 2;
       if (a.median) {
-        medianB.box(a.x, zc, a.median, L + 4, 0, 0.35);
+        if (inVis(a.x, zc)) medianB.box(a.x, zc, a.median, L + 4, 0, 0.35);
         for (let z = za + 4; z < zb - 4; z += 14) trees(a.x, z, between(0.9, 1.15), 0.35);
         for (let z = za + 10; z < zb - 10; z += 28) { benchI.add(a.x - 2.4, 0.6, z); benchI.add(a.x + 2.4, 0.6, z); }
       } else if (!a.oneWay) {
@@ -778,7 +781,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
   }
 
   // ----- Morningside Park (sunken, with cliff and pond) ------------------------
-  const MP = { x0: 265, x1: 399, z0: streetZ(124), z1: streetZ(110) - 15 };
+  const MP = { x0: 265, x1: 399, z0: VIS.z0 - 20, z1: streetZ(110) - 15 };
   const parkH = (x) => (x < 292 ? -13 * THREE.MathUtils.smoothstep(x, 266, 292) : -13 * (1 - THREE.MathUtils.smoothstep(x, 330, 398)));
   {
     const g = new THREE.PlaneGeometry(MP.x1 - MP.x0, MP.z1 - MP.z0, 70, 60);
@@ -980,25 +983,23 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
   // ----- Vehicles (instanced; car-following, signals, yielding) --------------------
   const lanes = [];
   for (const a of AVENUES) {
-    const zA = streetZ(127), zB = streetZ(101);
+    const zA = VIS.z0 - 10, zB = VIS.z1 + 10;
     if (a.oneWay) {
-      lanes.push({ axis: 'z', ave: a.id, c: a.x - 5, a: zB, b: zA, count: 20, speed: 10, bus: true });
-      lanes.push({ axis: 'z', ave: a.id, c: a.x + 2, a: zB, b: zA, count: 18, speed: 11 });
+      lanes.push({ axis: 'z', ave: a.id, c: a.x - 5, a: zB, b: zA, count: 7, speed: 10, bus: true });
+      lanes.push({ axis: 'z', ave: a.id, c: a.x + 2, a: zB, b: zA, count: 6, speed: 11 });
     } else {
       const off = a.median ? a.median / 2 + 4 : a.w / 4;
-      const z0 = a.id === 'claremont' ? streetZ(116) : zB;
-      const count = a.median ? 22 : a.id === 'claremont' ? 3 : 8;
+      const z0 = zB;
+      const count = a.median ? 8 : 3;
       lanes.push({ axis: 'z', ave: a.id, c: a.x + off, a: z0, b: zA, count, speed: 11, bus: !!a.median });
       lanes.push({ axis: 'z', ave: a.id, c: a.x - off, a: zA, b: z0, count, speed: 11, bus: !!a.median });
     }
   }
-  for (const [n, x0, x1, cnt] of [[110, -390, 690, 10], [111, -390, 110, 4], [112, -390, 110, 5], [113, -390, 255, 6], [114, -390, 255, 6], [115, -390, -150, 3], [116, -390, -150, 3], [118, 110, 255, 3], [120, -390, 255, 6]]) {
+  for (const [n, x0, x1, cnt] of [[110, VIS.x0, VIS.x1, 4], [111, VIS.x0, 110, 2], [112, VIS.x0, 110, 2], [113, VIS.x0, 255, 3], [114, VIS.x0, 255, 3], [115, VIS.x0, -150, 1], [116, VIS.x0, -150, 1], [117, VIS.x0, -150, 1]]) {
     const dir = n % 2 === 0 ? 1 : -1; // even streets eastbound, odd westbound
     lanes.push({ axis: 'x', n, c: streetZ(n) + (n === 110 ? 4 : 2) * (dir > 0 ? 1 : -1), a: dir > 0 ? x0 : x1, b: dir > 0 ? x1 : x0, count: cnt, speed: 8 });
     if (n === 110) lanes.push({ axis: 'x', n, c: streetZ(n) - 4, a: x1, b: x0, count: cnt, speed: 8 });
   }
-  lanes.push({ axis: 'z', c: PARKWAY_X - 5, a: -1500, b: 1500, count: 14, speed: 22, y: -6.9 });
-  lanes.push({ axis: 'z', c: PARKWAY_X + 5, a: 1500, b: -1500, count: 14, speed: 22, y: -6.9 });
   for (const ln of lanes) {
     ln.dir = Math.sign(ln.b - ln.a);
     ln.L = Math.abs(ln.b - ln.a);
@@ -1039,7 +1040,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
   const shuffle = (arr) => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
   shuffle(carPool);
   shuffle(scooterPool);
-  const population = { cars: Math.round(carPool.length / 2), scooters: Math.round(scooterPool.length * 0.35), people: 560 };
+  const population = { cars: Math.round(carPool.length / 2), scooters: Math.round(scooterPool.length * 0.35), people: 260 };
   function applyVehiclePopulation() {
     carPool.forEach((m, i) => activate(m, i < population.cars));
     scooterPool.forEach((m, i) => activate(m, i < population.scooters));
@@ -1208,7 +1209,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
     return !!other && streetKind(n, side < 0 ? other : a, side < 0 ? a : other) === 'road';
   };
   const jAt = (aveId, n) => junctions.find((j) => j.ave === aveId && j.n === n);
-  for (let i = 0; i < 1100; i++) {
+  for (let i = 0; i < 600; i++) {
     const r = rand();
     let p;
     if (r < 0.1) {
@@ -1218,7 +1219,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
       // along an avenue sidewalk, crossing side streets
       const a = pick(AVENUES.filter((v) => v.id !== 'claremont'));
       const side = rand() < 0.5 ? -1 : 1;
-      const n0 = Math.floor(between(Math.max(a.from, 108), Math.min(a.to, 118)));
+      const n0 = Math.floor(between(110, 116));
       const span = 1 + Math.floor(rand() * 3);
       const x = a.x + side * (a.w / 2 + between(1.4, 3.6));
       const crossings = [];
@@ -1230,7 +1231,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
       p = { axis: 'z', c: x, lo: streetZ(n0 + span) + 10, hi: streetZ(n0) - 10, y: 0.16, crossings };
     } else {
       // along a street sidewalk, crossing an avenue
-      const n = 108 + Math.floor(rand() * 13);
+      const n = 110 + Math.floor(rand() * 8);
       const aves = avesAt(n);
       const k = Math.floor(rand() * (aves.length - 1));
       const A = aves[k], B = aves[k + 1];
@@ -1408,7 +1409,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
       return [p, s];
     });
     scene.add(g);
-    const c = i < 7 ? { x: -560, z: streetZ(113), r: 80 } : { x: -16, z: -200, r: 120 };
+    const c = i < 7 ? { x: 330, z: streetZ(113), r: 70 } : { x: -16, z: -100, r: 110 };
     const r = c.r + between(-25, 25), h = between(30, 60), sp = between(0.08, 0.16), ph = rand() * 6;
     updaters.push((dt, t) => {
       const a = t * sp + ph;
@@ -1443,6 +1444,17 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
       d.rotation.y = -a;
     });
   }
+
+  // Drop anything that lies entirely outside the site + context margin.
+  const box = new THREE.Box3();
+  for (const o of [...scene.children]) {
+    if (o.isInstancedMesh || o.isLight || o.isGroup || o === sun.target) continue;
+    if (o.isSprite) { if (!inVis(o.position.x, o.position.z, 0)) scene.remove(o); continue; }
+    if (!o.isMesh) continue;
+    box.setFromObject(o);
+    if (box.max.x < VIS.x0 - 10 || box.min.x > VIS.x1 + 10 || box.max.z < VIS.z0 - 10 || box.min.z > VIS.z1 + 10) scene.remove(o);
+  }
+  placeLabels.splice(0, placeLabels.length, ...placeLabels.filter((l) => l.parent));
 
   return {
     occupants,

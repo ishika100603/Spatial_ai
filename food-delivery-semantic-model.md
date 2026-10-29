@@ -57,22 +57,24 @@ Delivery Partner ──── Drives to ────► Restaurant ◄───�
 
 ## Location (Morningside Heights, around Columbia University)
 
-The model is placed on the real street grid from W 108th to W 120th St, between Riverside Dr and Manhattan Ave.
+The site is the real street grid from W 111th to W 116th St, between Broadway and Morningside Dr (about 420 m × 405 m): Columbia's South Lawn and College Walk to the north, the Cathedral of St. John the Divine to the south-east, Morningside Park along the east edge.
 The main object is the **food parcel**, and places are named by **street & avenue junctions**.
 
 | Entity           | Location |
 |------------------|----------|
 | Indian Kitchen   | Broadway between W 111th & W 112th St (east side) |
-| Thai Leaf        | Amsterdam Ave between W 110th & W 111th St (west side) |
+| Thai Leaf        | Amsterdam Ave between W 111th & W 112th St (west side) |
 | Wok on Wheels    | Food truck on Broadway between W 115th & W 116th St, by the Columbia gates |
 | Trattoria Roma   | Amsterdam Ave between W 113th & W 114th St (east side) |
-| Priya (C01)      | W 118th St between Amsterdam Ave & Morningside Dr |
+| Priya (C01)      | Morningside Dr between W 115th & W 116th St (west side) |
+| Sam (C02)        | W 113th St between Broadway & Amsterdam Ave |
+| Ana (C03)        | W 113th St between Amsterdam Ave & Morningside Dr |
 | Food parcel      | Wherever its container is: the kitchen → the rider's bag → the customer's door |
 | UberEats         | No physical place: it is present as the sticker in each partner's window |
 
 The four location questions the model answers:
 
-1. **Given a referent, what is its location?** "Where is parcel O01?" → *in DP01's bag, on Amsterdam Ave between W 116th & W 117th St*.
+1. **Given a referent, what is its location?** "Where is parcel O01?" → *in DP01's bag, on Amsterdam Ave between W 114th & W 115th St*.
 2. **Given a location, what is occupying it?** "What is at Broadway & W 112th St?" → *Indian Kitchen, parcel O01, 4 pedestrians*.
 3. **Given a frame of reference, where is an occupant?** The same parcel can be described on the street grid, from a landmark ("4½ blocks south of the Columbia Main Gates"), from the customer's door, from the rider's own point of view ("110 m straight ahead") or as latitude/longitude.
 4. **Given a description, infer a specific location.** "The Indian place near the cathedral" → *Indian Kitchen, Broadway & W 112th St*.
@@ -93,8 +95,8 @@ Distance is measured on the street grid, not as the crow flies. Three delivery j
 
 | Job | Pickup | Delivery | Usual mode |
 |-----|--------|----------|------------|
-| 1 | P1 Indian Kitchen (Broadway, W 111th–112th) | D1 Priya (W 118th St, Amsterdam–Morningside Dr) | 🛵 Bike |
-| 2 | P2 Thai Leaf (Amsterdam, W 110th–111th) | D2 Ana (Riverside Dr & W 111th St) | 🚗 Car |
+| 1 | P1 Indian Kitchen (Broadway, W 111th–112th) | D1 Priya (Morningside Dr, W 115th–116th) | 🛵 Bike |
+| 2 | P2 Thai Leaf (Amsterdam, W 111th–112th) | D2 Ana (W 113th St, Amsterdam–Morningside Dr) | 🚗 Car |
 | 3 | P3 Wok on Wheels (Broadway & W 116th St) | D3 Sam (W 113th St, Broadway–Amsterdam) | 🚲 Bicycle |
 
 For each job the model reports:
@@ -106,7 +108,7 @@ For each job the model reports:
 
 Routes are coloured on a **gradient from long (red) to short (green)**.
 
-**Road closures** remove a street segment from the network (for example Broadway between W 114th & W 115th St for a water-main repair). The route is recomputed around it, and the model reports the **de-route**: the extra metres and minutes compared with the fastest route if the street were open. A rider can still reach a door on a closed block (local access).
+**Road closures** remove a street segment from the network (for example Broadway between W 113th & W 114th St for a water-main repair, which sends the food-truck delivery 300 m round). The route is recomputed around it, and the model reports the **de-route**: the extra metres and minutes compared with the fastest route if the street were open. A rider can still reach a door on a closed block (local access). If no road goes round inside the site, the rider walks the bike through the closed block and the extra minutes are shown.
 
 ## Proximity (how close is too close?)
 
@@ -128,4 +130,4 @@ An **intensity bar** (low → medium → extreme) shows how close the nearest mo
 - **IF** a pedestrian is in the crosswalk ahead **THEN** yield **ELSE** go.
 - **IF** the rider is within 1 block of the customer **THEN** reveal the buzzer/apartment **ELSE** show the area only.
 
-Traffic is part of the simulation: 169 signalised junctions on a 70 s cycle, cars and scooters that keep a following distance and brake for people and riders, and pedestrians who wait for the walk signal (a few jaywalk). The numbers of vehicles, scooters/bikes and pedestrians can be changed live.
+Traffic is part of the simulation: 21 signalised junctions on a 70 s cycle, cars and scooters that keep a following distance and brake for people and riders, and pedestrians who wait for the walk signal (a few jaywalk). The numbers of vehicles, scooters/bikes and pedestrians can be changed live.

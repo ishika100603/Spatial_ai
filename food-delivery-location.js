@@ -10,21 +10,20 @@
 // "North" here means Manhattan's grid north (uptown), which is ~29° east of true north.
 
 export const BLOCK = 84; // metres between consecutive streets
-export const STREETS = [108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120];
+// The site: W 111th–W 116th St, Broadway to Morningside Dr (≈ 420 m × 405 m).
+export const STREETS = [111, 112, 113, 114, 115, 116];
 export const streetZ = (n) => -(n - 114) * BLOCK;
 export const streetName = (n) => (n === 110 ? 'W 110th St (Cathedral Pkwy)' : `W ${n}th St`);
 export const streetShort = (n) => `W ${n}th St`;
 export const streetWidth = (n) => (n === 110 ? 30 : 18);
 
 export const AVENUES = [
-  { id: 'riverside', name: 'Riverside Dr', x: -390, w: 22, from: 108, to: 120 },
-  { id: 'claremont', name: 'Claremont Ave', x: -265, w: 18, from: 116, to: 120 },
-  { id: 'broadway', name: 'Broadway', x: -150, w: 45, from: 108, to: 120, median: 8 },
-  { id: 'amsterdam', name: 'Amsterdam Ave', x: 110, w: 30, from: 108, to: 120, oneWay: 'north' },
-  { id: 'morningsideDr', name: 'Morningside Dr', x: 255, w: 20, from: 110, to: 120 },
-  { id: 'morningsideAve', name: 'Morningside Ave', x: 410, w: 22, from: 110, to: 120 },
-  { id: 'manhattan', name: 'Manhattan Ave', x: 540, w: 22, from: 108, to: 120 },
+  { id: 'broadway', name: 'Broadway', x: -150, w: 45, from: 111, to: 116, median: 8 },
+  { id: 'amsterdam', name: 'Amsterdam Ave', x: 110, w: 30, from: 111, to: 116, oneWay: 'north' },
+  { id: 'morningsideDr', name: 'Morningside Dr', x: 255, w: 20, from: 111, to: 116 },
 ];
+// Site boundary (metres, kerb to kerb including the boundary streets' sidewalks)
+export const SITE = { x0: -180, x1: 268, z0: streetZ(116) - 14, z1: streetZ(111) + 14 };
 export const avenue = (id) => AVENUES.find((a) => a.id === id);
 export const HUDSON_X = -505; // river edge
 export const PARKWAY_X = -470; // Henry Hudson Pkwy
@@ -43,11 +42,8 @@ export function streetSegmentKind(n, a, b) {
 // Named areas that are not ordinary blocks.
 export const ZONES = [
   { id: 'columbia', name: 'Columbia University (Morningside campus)', x0: -127, x1: 95, z0: streetZ(120) + 9, z1: streetZ(114) - 9 },
-  { id: 'barnard', name: 'Barnard College', x0: -256, x1: -173, z0: streetZ(120) + 9, z1: streetZ(116) - 9 },
   { id: 'cathedral', name: 'Cathedral of St. John the Divine (close)', x0: 125, x1: 245, z0: streetZ(113) + 9, z1: streetZ(110) - 15 },
   { id: 'morningsidePark', name: 'Morningside Park', x0: 265, x1: 399, z0: streetZ(124), z1: streetZ(110) - 15 },
-  { id: 'riversidePark', name: 'Riverside Park', x0: PARKWAY_X + 12, x1: -401, z0: -700, z1: 700 },
-  { id: 'hudson', name: 'Hudson River', x0: -3000, x1: HUDSON_X, z0: -3000, z1: 3000 },
 ];
 export const zoneAt = (x, z) => ZONES.find((zn) => x >= zn.x0 && x <= zn.x1 && z >= zn.z0 && z <= zn.z1) || null;
 
@@ -55,17 +51,12 @@ export const LANDMARKS = [
   { id: 'mainGates', name: 'Columbia Main Gates (Broadway & W 116th St)', x: -125, z: streetZ(116), aliases: ['main gate', 'columbia gate', 'gates', 'columbia entrance'] },
   { id: 'amsGates', name: 'Columbia Amsterdam Gates (Amsterdam & W 116th St)', x: 93, z: streetZ(116), aliases: ['amsterdam gate'] },
   { id: 'collegeWalk', name: 'College Walk', x: -15, z: streetZ(116), aliases: ['college walk'] },
-  { id: 'low', name: 'Low Memorial Library', x: -15, z: streetZ(116) - 45, aliases: ['low library', 'low steps', 'low memorial', 'alma mater'] },
   { id: 'butler', name: 'Butler Library', x: -15, z: streetZ(114) - 30, aliases: ['butler'] },
-  { id: 'columbia', name: 'Columbia University', x: -15, z: streetZ(116) - 10, aliases: ['columbia', 'campus', 'university'] },
-  { id: 'barnard', name: 'Barnard College', x: -215, z: streetZ(118), aliases: ['barnard'] },
+  { id: 'columbia', name: 'Columbia University (South Lawn)', x: -15, z: streetZ(115), aliases: ['columbia', 'campus', 'university', 'south lawn'] },
   { id: 'cathedral', name: 'Cathedral of St. John the Divine', x: 175, z: streetZ(112), aliases: ['cathedral', 'st john', 'st. john', 'saint john', 'divine', 'church'] },
-  { id: 'station116', name: '116 St–Columbia University station (1 train)', x: -150, z: streetZ(116) + 15, aliases: ['116 station', '116th station', 'columbia station', 'subway at 116'] },
-  { id: 'station110', name: 'Cathedral Pkwy–110 St station (1 train)', x: -150, z: streetZ(110) - 15, aliases: ['110 station', '110th station', 'cathedral pkwy station', 'subway', 'station', 'train'] },
+  { id: 'station116', name: '116 St–Columbia University station (1 train)', x: -150, z: streetZ(116) + 15, aliases: ['116 station', '116th station', 'columbia station', 'subway', 'station', 'train'] },
   { id: 'pond', name: 'Morningside Park pond', x: 345, z: streetZ(112) - 30, aliases: ['pond', 'waterfall', 'lake'] },
   { id: 'morningsidePark', name: 'Morningside Park', x: 335, z: streetZ(115), aliases: ['morningside park'] },
-  { id: 'riversidePark', name: 'Riverside Park', x: -440, z: streetZ(113), aliases: ['riverside park'] },
-  { id: 'hudson', name: 'Hudson River', x: -560, z: streetZ(113), aliases: ['hudson', 'river'] },
 ];
 
 // --- Road graph -----------------------------------------------------------
@@ -145,7 +136,15 @@ export function snapToRoad(p, mode = 'Car') {
 // With { ignoreClosures: true } it returns the ideal route as if every street were open.
 export function route(from, to, mode = 'Car', opts = {}) {
   ignoreClosures = !!opts.ignoreClosures;
-  try { return routeInner(from, to, mode); } finally { ignoreClosures = false; }
+  try {
+    const r = routeInner(from, to, mode);
+    if (r.unreachable && !ignoreClosures) {
+      // No drivable way round inside the site: the rider dismounts and walks through the closure.
+      ignoreClosures = true;
+      return { ...routeInner(from, to, mode), throughClosure: true };
+    }
+    return r;
+  } finally { ignoreClosures = false; }
 }
 
 function routeInner(from, to, mode) {
@@ -183,6 +182,7 @@ function routeInner(from, to, mode) {
     }
     let end = null;
     for (const [k, c] of goalCost) if (end === null || dist.get(k) + c < dist.get(end) + goalCost.get(end)) end = k;
+    if (dist.get(end) === Infinity) return { points: [from, to], length: Infinity, steps: [], unreachable: true };
     for (let k = end; k; k = prev.get(k)) nodePath.unshift(k);
   }
   const pts = [{ x: from.x, z: from.z }, startPt, ...nodePath.map((k) => ({ x: NODES.get(k).x, z: NODES.get(k).z })), goalPt, { x: to.x, z: to.z }];
@@ -219,7 +219,7 @@ function directions(points) {
 
 // --- Describing a place -----------------------------------------------------
 const nearestAvenue = (x, nf = 114) => {
-  const list = AVENUES.filter((a) => nf >= a.from - 0.6 && nf <= a.to + 0.6);
+  const list = AVENUES.filter((a) => nf >= a.from - 1.5 && nf <= a.to + 1.5);
   return list.reduce((b, a) => (Math.abs(a.x - x) < Math.abs(b.x - x) ? a : b), list[0]);
 };
 
@@ -235,14 +235,14 @@ export function nearestJunction(x, z) {
 // Street-grid address of a point, e.g. "on Broadway between W 111th St & W 112th St (east side)".
 export function describe(x, z) {
   const nf = 114 - z / BLOCK;
-  const n = Math.max(108, Math.min(120, Math.round(nf)));
+  const n = Math.max(110, Math.min(117, Math.round(nf))); // the site plus one street of context
   const sz = streetZ(n);
   const ave = nearestAvenue(x, nf);
   const dA = Math.abs(x - ave.x) - ave.w / 2;
   const dS = Math.abs(z - sz) - streetWidth(n) / 2;
   const j = nearestJunction(x, z);
   const zone = zoneAt(x, z);
-  const lo = Math.max(108, Math.min(119, Math.floor(nf)));
+  const lo = Math.max(110, Math.min(116, Math.floor(nf)));
   let text;
   if (zone && dA > 0 && dS > 0) {
     text = `${zone.name}, near ${j.name}`;
@@ -254,7 +254,7 @@ export function describe(x, z) {
     const side = dA < 0 ? 'in the roadway' : `${x > ave.x ? 'east' : 'west'} side`;
     text = `on ${ave.name} between ${streetShort(lo)} & ${streetShort(lo + 1)} (${side})`;
   } else {
-    const aves = AVENUES.filter((a) => n >= a.from && n <= a.to).sort((p, q) => p.x - q.x);
+    const aves = [...AVENUES].sort((p, q) => p.x - q.x);
     const west = [...aves].reverse().find((a) => a.x <= x);
     const east = aves.find((a) => a.x >= x);
     const side = dS < 0 ? 'in the roadway' : `${z < sz ? 'north' : 'south'} side`;
@@ -335,8 +335,8 @@ const AVENUE_PATTERNS = [
 
 export function parsePlace(text) {
   const s = text.toLowerCase();
-  const aves = AVENUE_PATTERNS.filter(([, re]) => re.test(s)).map(([id]) => avenue(id));
-  const streets = [...s.matchAll(/\b(1[01]\d|120)(?:st|nd|rd|th)?\b/g)].map((m) => +m[1]).filter((n) => n >= 108 && n <= 120);
+  const aves = AVENUE_PATTERNS.filter(([, re]) => re.test(s)).map(([id]) => avenue(id)).filter(Boolean);
+  const streets = [...s.matchAll(/\b(1[01]\d|120)(?:st|nd|rd|th)?\b/g)].map((m) => +m[1]).filter((n) => n >= STREETS[0] && n <= STREETS[STREETS.length - 1]);
   if (/cathedral\s*p(ar)?kwy/.test(s)) streets.push(110);
   if (/college walk/.test(s)) streets.push(116);
   const landmarks = LANDMARKS.filter((l) => l.aliases.some((a) => s.includes(a)));

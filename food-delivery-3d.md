@@ -4,7 +4,7 @@ title: Food Delivery — Morningside Heights
 
 # Food Delivery — Morningside Heights
 
-A 3D semantic model of food delivery set on the real street grid around Columbia University (W 108th–120th St, Riverside Dr to Manhattan Ave).
+A 3D semantic model of food delivery set on the real street grid around Columbia University. The site is W 111th–116th St, between Broadway and Morningside Dr (about 420 m × 405 m), with one block of the surrounding city shown for context.
 Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it, or click anywhere on the map to ask *what is here?*
 
 <style>
@@ -48,14 +48,15 @@ Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it,
 #fd3d.fd-mode-distance .fd-loc { display: none; }
 #fd3d.fd-mode-distance .fd-dist { display: block; padding: 10px 12px; overflow: auto; min-height: 0; flex: 1 1 auto; }
 #fd3d .fd-plan-wrap { border-radius: 8px; overflow: hidden; border: 1px solid #ddd; }
-#fd3d .fd-plan { display: block; width: 100%; height: auto; aspect-ratio: 1110 / 1098; cursor: crosshair; }
+#fd3d .fd-plan { display: block; width: 100%; height: auto; aspect-ratio: 580 / 518; cursor: crosshair; }
 #fd3d .fd-plan text { font-family: system-ui, sans-serif; }
-#fd3d .fd-plan-zone { font-size: 34px; font-weight: 800; fill: rgba(60,50,40,.45); text-anchor: middle; letter-spacing: 2px; }
-#fd3d .fd-plan-ave { font-size: 27px; font-weight: 700; fill: #555; text-anchor: end; }
-#fd3d .fd-plan-st { font-size: 24px; font-weight: 700; fill: #666; }
-#fd3d .fd-plan-mk { font-size: 27px; font-weight: 800; fill: #fff; text-anchor: middle; }
-#fd3d .fd-plan-n { font-size: 15px; font-weight: 800; fill: #1d1d1f; text-anchor: middle; }
-#fd3d .fd-plan-rider { font-size: 19px; text-anchor: middle; }
+#fd3d .fd-plan-zone { font-size: 17px; font-weight: 800; fill: rgba(60,50,40,.45); text-anchor: middle; letter-spacing: 2px; }
+#fd3d .fd-plan-ave { font-size: 13px; font-weight: 700; fill: #555; text-anchor: middle; }
+#fd3d .fd-plan-site { font-size: 10px; font-weight: 800; fill: #1d1d1f; text-anchor: end; letter-spacing: 1px; }
+#fd3d .fd-plan-st { font-size: 12px; font-weight: 700; fill: #666; }
+#fd3d .fd-plan-mk { font-size: 14px; font-weight: 800; fill: #fff; text-anchor: middle; }
+#fd3d .fd-plan-n { font-size: 8px; font-weight: 800; fill: #1d1d1f; text-anchor: middle; }
+#fd3d .fd-plan-rider { font-size: 10px; text-anchor: middle; }
 #fd3d .fd-legend { display: flex; align-items: center; gap: 8px; margin: 8px 0 4px; font-size: 11px; font-weight: 700; line-height: 1.1; }
 #fd3d .fd-legend small { font-weight: 500; color: #666; }
 #fd3d .fd-legend span:last-child { text-align: right; }
@@ -179,7 +180,7 @@ Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it,
 | Rider on a motorbike, a car, a rider on an e-bike | Delivery Partner | Moving on the streets |
 | Storefronts with awnings and signs, a food truck | Restaurant | Broadway & Amsterdam Ave storefronts, food truck at Broadway & W 116th |
 | Green "Uber Eats" sticker in each partner's window | UberEats (partners with) | A platform — present at its partners |
-| Doorways with a person waiting | Customer | W 113th St, W 118th St, Riverside Dr |
+| Doorways with a person waiting | Customer | Morningside Dr (W 115th–116th), W 113th St (two blocks) |
 | Brown paper bag | Order / parcel | In the kitchen, in a rider's bag, or at the door |
 
 **Location questions** (left panel): 1 · where is a referent (e.g. the parcel)? 2 · what occupies a junction or a clicked spot? 3 · where is an occupant in a chosen frame of reference (street grid, landmark, customer, rider, lat/long)? 4 · turn a description like "the Indian place near the cathedral" into a specific junction.

@@ -17,21 +17,21 @@ const P = (x, z) => ({ x, z });
 function initialModel() {
   return {
     deliveryPartners: [
-      { id: 'DP01', type: 'DeliveryPartner', name: 'Arjun', rating: 4.8, commuteType: 'Bike', vehicle: 'Motorbike', tips: 12.5, position: P(-130, streetZ(110) - 30), heading: P(0, -1) },
+      { id: 'DP01', type: 'DeliveryPartner', name: 'Arjun', rating: 4.8, commuteType: 'Bike', vehicle: 'Motorbike', tips: 12.5, position: P(-129, streetZ(111) - 25), heading: P(0, -1) },
       { id: 'DP02', type: 'DeliveryPartner', name: 'Maya', rating: 4.6, commuteType: 'Car', vehicle: 'Toyota Prius', tips: 8.0, position: P(116, streetZ(115) + 30), heading: P(0, -1) },
-      { id: 'DP03', type: 'DeliveryPartner', name: 'Leo', rating: 4.9, commuteType: 'Bicycle', vehicle: 'E-bike', tips: 15.25, position: P(249, streetZ(117) + 20), heading: P(0, 1) },
+      { id: 'DP03', type: 'DeliveryPartner', name: 'Leo', rating: 4.9, commuteType: 'Bicycle', vehicle: 'E-bike', tips: 15.25, position: P(249, streetZ(115) + 20), heading: P(0, 1) },
     ],
     restaurants: [
       { id: 'R01', type: 'Restaurant', name: 'Indian Kitchen', cuisineType: ['Indian', 'Asian'], storeType: 'Restaurant', prepTime: 14, color: 0xb5402a, face: P(-123, 200), facing: 'w', menu: ['Paneer Tikka', 'Garlic Naan', 'Chicken Biryani', 'Dal Makhani'] },
-      { id: 'R02', type: 'Restaurant', name: 'Thai Leaf', cuisineType: ['Thai'], storeType: 'Cafe', prepTime: 10, color: 0x2f7d4f, face: P(90.5, 300), facing: 'e', menu: ['Pad Thai', 'Green Curry', 'Tom Yum', 'Mango Sticky Rice'] },
+      { id: 'R02', type: 'Restaurant', name: 'Thai Leaf', cuisineType: ['Thai'], storeType: 'Cafe', prepTime: 10, color: 0x2f7d4f, face: P(90.5, 215), facing: 'e', menu: ['Pad Thai', 'Green Curry', 'Tom Yum', 'Mango Sticky Rice'] },
       { id: 'R03', type: 'Restaurant', name: 'Wok on Wheels', cuisineType: ['Chinese'], storeType: 'Food Truck', prepTime: 6, color: 0xd1342f, face: P(-170.5, streetZ(116) + 42), facing: 'truck', menu: ['Kung Pao Chicken', 'Veg Lo Mein', 'Pork Dumplings', 'Scallion Pancake'] },
       { id: 'R04', type: 'Restaurant', name: 'Trattoria Roma', cuisineType: ['Italian'], storeType: 'Fine Dining', prepTime: 22, color: 0x3b2f6b, face: P(129.5, 40), facing: 'w', menu: ['Cacio e Pepe', 'Margherita Pizza', 'Tiramisu', 'Burrata'] },
     ],
     service: { id: 'UE01', type: 'UberEats', name: 'UberEats', serviceCharge: 3.99, route: 'computed on the street grid', deliveryTime: null, membership: 'Uber One' },
     customers: [
-      { id: 'C01', type: 'Customer', name: 'Priya', face: P(180, -322.5), facing: 'n', profile: { email: 'priya@example.com', phone: '+1 555 0142', membership: 'Uber One', password: '••••••', payment: 'Visa •••• 4242', history: '41 past orders' }, delivery: { address: 'W 118th St, Apt 4B (between Amsterdam & Morningside Dr)', instructions: 'Buzz 4B, leave with doorman', orderNumber: 'O01' } },
+      { id: 'C01', type: 'Customer', name: 'Priya', face: P(240.5, -125), facing: 'e', profile: { email: 'priya@example.com', phone: '+1 555 0142', membership: 'Uber One', password: '••••••', payment: 'Visa •••• 4242', history: '41 past orders' }, delivery: { address: 'Morningside Dr, Apt 4B (between W 115th & W 116th St)', instructions: 'Buzz 4B, leave with doorman', orderNumber: 'O01' } },
       { id: 'C02', type: 'Customer', name: 'Sam', face: P(-40, 70.5), facing: 's', profile: { email: 'sam@example.com', phone: '+1 555 0177', membership: 'Standard', password: '••••••', payment: 'Amex •••• 1009', history: '7 past orders' }, delivery: { address: 'W 113th St, Apt 2F (between Broadway & Amsterdam)', instructions: 'Meet at the lobby', orderNumber: '—' } },
-      { id: 'C03', type: 'Customer', name: 'Ana', face: P(-374.5, 225), facing: 'w', profile: { email: 'ana@example.com', phone: '+1 555 0110', membership: 'Guest', password: '—', payment: 'Apple Pay', history: 'first order' }, delivery: { address: 'Riverside Dr at W 111th St, Apt 9C', instructions: 'Doorman building', orderNumber: '—' } },
+      { id: 'C03', type: 'Customer', name: 'Ana', face: P(190, 70.5), facing: 's', profile: { email: 'ana@example.com', phone: '+1 555 0110', membership: 'Guest', password: '—', payment: 'Apple Pay', history: 'first order' }, delivery: { address: 'W 113th St, Apt 9C (between Amsterdam & Morningside Dr)', instructions: 'Doorman building', orderNumber: '—' } },
     ],
     orders: [
       { id: 'O01', type: 'Order', customer: 'C01', restaurant: 'R01', deliveryPartner: 'DP01', status: 'Placed', paid: false, active: false, items: ['2 × Paneer Tikka', '1 × Garlic Naan'], orderValue: 31.5, deliveryFee: 0, estimatedDeliveryTime: null, parcel: 'R01' },
@@ -105,14 +105,14 @@ canvasHost.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(42, 1, 1, 12000);
-const HOME = { pos: new THREE.Vector3(330, 360, 620), target: new THREE.Vector3(-40, 0, 40) };
+const HOME = { pos: new THREE.Vector3(290, 300, 460), target: new THREE.Vector3(40, 0, 40) };
 camera.position.copy(HOME.pos);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.copy(HOME.target);
 controls.enableDamping = true;
 controls.maxPolarAngle = Math.PI / 2.08;
 controls.minDistance = 12;
-controls.maxDistance = 2600;
+controls.maxDistance = 1300;
 const hemi = new THREE.HemisphereLight(0xffffff, 0x888888, 1.2);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffffff, 2.5);
@@ -653,7 +653,7 @@ function renderLocTab() {
   } else {
     locBody.innerHTML = `<div class="fd-q-title">Given a description, infer a more specific location.</div>
       <form class="fd-desc"><input value="${esc(loc.text)}" placeholder="e.g. the Indian place near the cathedral" /><button>Find</button></form>
-      <div class="fd-chips">${['the Indian place near the cathedral', 'corner of 116th and Amsterdam', 'food truck by the Columbia gates', 'two blocks north of the 110th St station', 'where my food is', "Priya's building"].map((q) => `<button data-desc="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+      <div class="fd-chips">${['the Indian place near the cathedral', 'corner of 116th and Amsterdam', 'food truck by the Columbia gates', 'one block north of the cathedral', 'where my food is', "Priya's building"].map((q) => `<button data-desc="${esc(q)}">${esc(q)}</button>`).join('')}</div>
       <div class="fd-out"></div>`;
   }
   updateLocOut();
