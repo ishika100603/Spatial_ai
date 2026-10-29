@@ -107,3 +107,25 @@ For each job the model reports:
 Routes are coloured on a **gradient from long (red) to short (green)**.
 
 **Road closures** remove a street segment from the network (for example Broadway between W 114th & W 115th St for a water-main repair). The route is recomputed around it, and the model reports the **de-route**: the extra metres and minutes compared with the fastest route if the street were open. A rider can still reach a door on a closed block (local access).
+
+## Proximity (how close is too close?)
+
+Every delivery partner has a **boundary** with three zones, sized to its commute type, and senses everything within 30 m: cars, taxis, buses, scooters and bikes, pedestrians, other riders, buildings, traffic lights, street trees and lamps.
+
+| Commute type | Extreme | Medium | Low |
+|--------------|---------|--------|-----|
+| 🚶 Walking   | < 1 m   | < 2.5 m | < 5 m |
+| 🚲 Bicycle   | < 1.5 m | < 4 m  | < 8 m |
+| 🛵 Bike      | < 2 m   | < 5 m  | < 10 m |
+| 🚗 Car       | < 2.5 m | < 6 m  | < 12 m |
+
+An **intensity bar** (low → medium → extreme) shows how close the nearest moving object is. The rules:
+
+- **IF** a moving object is inside the extreme zone ahead **THEN** stop **ELSE** continue.
+- **IF** it is inside the medium zone ahead **THEN** slow to 40% **ELSE** keep speed.
+- **IF** anything is inside the low zone **THEN** ride with caution (80%) **ELSE** normal speed.
+- **IF** the light ahead is red or yellow within 18 m **THEN** stop at the line **ELSE** proceed.
+- **IF** a pedestrian is in the crosswalk ahead **THEN** yield **ELSE** go.
+- **IF** the rider is within 1 block of the customer **THEN** reveal the buzzer/apartment **ELSE** show the area only.
+
+Traffic is part of the simulation: 169 signalised junctions on a 70 s cycle, cars and scooters that keep a following distance and brake for people and riders, and pedestrians who wait for the walk signal (a few jaywalk). The numbers of vehicles, scooters/bikes and pedestrians can be changed live.

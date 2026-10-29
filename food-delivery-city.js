@@ -3,7 +3,7 @@
 // St. John the Divine, Riverside and Morningside Parks, the Hudson, traffic and people.
 // Decorative except for the street grid, which comes from the location model.
 import * as THREE from 'three';
-import { AVENUES, BLOCK, streetZ, streetWidth, streetShort, streetSegmentKind, zoneAt, HUDSON_X, PARKWAY_X } from './food-delivery-location.js?v=6';
+import { AVENUES, BLOCK, streetZ, streetWidth, streetShort, streetSegmentKind, zoneAt, HUDSON_X, PARKWAY_X } from './food-delivery-location.js?v=7';
 
 const VIS_STREETS = [];
 for (let n = 101; n <= 127; n++) VIS_STREETS.push(n);
@@ -285,6 +285,32 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
   asphalt.receiveShadow = true;
   scene.add(asphalt);
 
+  // Spatial index of static objects (buildings, trees, lamps) so agents can sense them.
+  const staticIndex = {
+    cells: new Map(),
+    size: 40,
+    key(i, k) { return `${i},${k}`; },
+    add(kind, o) {
+      o.kind = kind;
+      const x0 = o.x0 ?? o.x, x1 = o.x1 ?? o.x, z0 = o.z0 ?? o.z, z1 = o.z1 ?? o.z;
+      for (let i = Math.floor(x0 / this.size); i <= Math.floor(x1 / this.size); i++)
+        for (let k = Math.floor(z0 / this.size); k <= Math.floor(z1 / this.size); k++) {
+          const key = this.key(i, k);
+          if (!this.cells.has(key)) this.cells.set(key, []);
+          this.cells.get(key).push(o);
+        }
+    },
+    query(x, z, R, kind) {
+      const seen = new Set();
+      for (let i = Math.floor((x - R) / this.size); i <= Math.floor((x + R) / this.size); i++)
+        for (let k = Math.floor((z - R) / this.size); k <= Math.floor((z + R) / this.size); k++)
+          for (const o of this.cells.get(this.key(i, k)) || []) if (o.kind === kind) seen.add(o);
+      return [...seen];
+    },
+  };
+  const footprint = (cx, cz, w, d, h, name = 'Building') => staticIndex.add('building', { x0: cx - w / 2, x1: cx + w / 2, z0: cz - d / 2, z1: cz + d / 2, h, name });
+  const junctions = []; // signalised intersections
+
   // ----- Street grid layout ---------------------------------------------------
   const avesAt = (n) => AVENUES.filter((a) => aveVisible(a, n)).sort((p, q) => p.x - q.x);
   const streetKind = (n, a, b) => (n >= 101 && n <= 127 ? streetSegmentKind(n, a.id, b.id) : 'road');
@@ -325,6 +351,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
 
   function addBuilding(cx, cz, w, d, h, opts = {}) {
     const f = opts.facade ?? pick(facades);
+    footprint(cx, cz, w, d, h, 'Apartment building');
     f.builder.sides(cx, cz, w, d, 0, h);
     roofs.top(cx, cz, w, d, h);
     cornices.add(cx, h - 0.4, cz, w + 0.9, 0.9, d + 0.9, 0, pick([0xd8cfbd, 0xbfb6a5, 0x9c9384, 0xe6dfd0]));
@@ -388,6 +415,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
   }
 
   const trees = (x, z, s = 1, y = 0) => {
+    staticIndex.add('tree', { x, z });
     treeTrunkI.add(x, y + 2.2 * s, z, s, s, s);
     const green = pick([0x4f7f3a, 0x5d8c3f, 0x3f6f35, 0x6b9445, 0x587f3a]);
     treeTopI.add(x, y + 6.2 * s, z, 3.2 * s * between(0.85, 1.15), 2.8 * s, 3.2 * s * between(0.85, 1.15), rand() * 6, green);
@@ -426,6 +454,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
           for (let x = a.x - a.w / 2 + 1; x < a.x + a.w / 2 - 0.5; x += 1.3) stripeI.add(x, 0.03, cz, 0.6, 1, 4);
         }
         // traffic signals on two corners
+        junctions.push({ x: a.x, z: sz, n, ave: a.id, w: a.w, sw, name: `${a.name} & ${streetShort(n)}`, offset: ((n - 101) * 4 + AVENUES.indexOf(a) * 9) % 70 });
         signalPoleI.add(a.x - a.w / 2 - 1, 2.5, sz - sw / 2 - 1);
         signalI.add(a.x - a.w / 2 - 1, 5.6, sz - sw / 2 - 1);
         signalPoleI.add(a.x + a.w / 2 + 1, 2.5, sz + sw / 2 + 1);
@@ -485,6 +514,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
         for (let z = za + 5; z < zb; z += 30) {
           const lx = a.x + side * (a.w / 2 + 1);
           lampI.add(lx, 4.25, z);
+          staticIndex.add('lamp', { x: lx, z });
           lampHeadI.add(lx - side * 0.8, 8.5, z);
         }
       }
@@ -528,6 +558,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
   for (let z = -150; z <= -95; z += 12) { trees(-102, z, 1, 0.75); trees(72, z, 1, 0.75); }
 
   function campusBuilding(cx, cz, w, d, h, { material = brickMat, roof = 'hip', roofMat = copperMat } = {}) {
+    footprint(cx, cz, w, d, h, 'Campus building');
     const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
     b.position.set(cx, 0.6 + h / 2, cz);
     b.castShadow = b.receiveShadow = true;
@@ -563,6 +594,9 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
   }
 
   // Low Memorial Library — domed, with portico and Low Steps
+  footprint(-16, -262, 58, 58, 50, 'Low Memorial Library');
+  footprint(-16, -48, 105, 46, 34, 'Butler Library');
+  footprint(188, streetZ(112), 100, 84, 60, 'Cathedral of St. John the Divine');
   {
     const cx = -16, cz = -262;
     const body = new THREE.Mesh(new THREE.BoxGeometry(58, 22, 58), stoneMat);
@@ -906,137 +940,457 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
     placeLabels.push(s);
   });
 
-  // ----- Traffic ------------------------------------------------------------------
-  function vehicle(kind) {
-    const g = new THREE.Group();
-    const color = kind === 'cab' ? 0xf2c218 : kind === 'bus' ? 0x2a5caa : pick(CAR_COLORS);
-    const L = kind === 'bus' ? 12 : 4.5;
-    const W = kind === 'bus' ? 2.5 : 1.85;
-    const H = kind === 'bus' ? 2.8 : 0.85;
-    const body = new THREE.Mesh(new THREE.BoxGeometry(W, H, L), mat(color, { roughness: 0.35, metalness: 0.35 }));
-    body.position.y = 0.35 + H / 2;
-    g.add(body);
-    if (kind === 'bus') {
-      const win = new THREE.Mesh(new THREE.BoxGeometry(W + 0.05, 0.9, L - 1.5), mat(0x1f2730, { roughness: 0.2, metalness: 0.5 }));
-      win.position.y = 2.3;
-      g.add(win);
-      const stripe = new THREE.Mesh(new THREE.BoxGeometry(W + 0.06, 0.25, L), mat(0xffffff));
-      stripe.position.y = 1.2;
-      g.add(stripe);
-    } else {
-      const cab = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.62, 2.3), mat(0x26303a, { roughness: 0.2, metalness: 0.5 }));
-      cab.position.set(0, 1.5, -0.2);
-      g.add(cab);
-      if (kind === 'cab') {
-        const sign = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.25, 0.3), mat(0xffffff, { emissive: 0xffffaa, emissiveIntensity: 0.3 }));
-        sign.position.set(0, 1.95, -0.2);
-        g.add(sign);
-      }
-    }
-    for (const z of [-L / 2 + 1, L / 2 - 1]) {
-      const wh = new THREE.Mesh(new THREE.BoxGeometry(W + 0.1, 0.7, 0.7), mat(0x151515));
-      wh.position.set(0, 0.35, z);
-      g.add(wh);
-    }
-    g.traverse((m) => m.isMesh && (m.castShadow = true));
-    scene.add(g);
-    return g;
+  const m4 = new THREE.Matrix4();
+  const col = new THREE.Color();
+  // ----- Traffic signals (part of the simulation) ---------------------------------
+  // Each junction runs a fixed cycle; offsets make a "green wave" up the avenues.
+  // ns = avenue traffic (uptown/downtown), ew = street traffic (crosstown).
+  const CYCLE = 70;
+  const signalState = (j, t) => {
+    const k = (((t + j.offset) % CYCLE) + CYCLE) % CYCLE;
+    return {
+      ns: k < 32 ? 'green' : k < 35 ? 'yellow' : 'red',
+      ew: k >= 37 && k < 64 ? 'green' : k >= 64 && k < 67 ? 'yellow' : 'red',
+    };
+  };
+  const lampGeo = new THREE.SphereGeometry(0.45, 10, 8);
+  const lampNS = new THREE.InstancedMesh(lampGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), junctions.length);
+  const lampEW = new THREE.InstancedMesh(lampGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), junctions.length);
+  junctions.forEach((j, i) => {
+    m4.makeTranslation(j.x - j.w / 2 - 1, 6.7, j.z - j.sw / 2 - 1);
+    lampNS.setMatrixAt(i, m4);
+    m4.makeTranslation(j.x + j.w / 2 + 1, 6.7, j.z + j.sw / 2 + 1);
+    lampEW.setMatrixAt(i, m4);
+  });
+  scene.add(lampNS, lampEW);
+  const LIGHT = { green: new THREE.Color(0x22e05a), yellow: new THREE.Color(0xffc21a), red: new THREE.Color(0xff2a1a) };
+  let simT = 0; // simulated seconds
+  let lampTimer = 0;
+  function paintSignals() {
+    junctions.forEach((j, i) => {
+      const s = signalState(j, simT);
+      lampNS.setColorAt(i, LIGHT[s.ns]);
+      lampEW.setColorAt(i, LIGHT[s.ew]);
+    });
+    lampNS.instanceColor.needsUpdate = true;
+    lampEW.instanceColor.needsUpdate = true;
   }
-  // lanes: [axis, fixed coordinate, from, to, direction, count, speed]
+  paintSignals();
+
+  // ----- Vehicles (instanced; car-following, signals, yielding) --------------------
   const lanes = [];
   for (const a of AVENUES) {
     const zA = streetZ(127), zB = streetZ(101);
     if (a.oneWay) {
-      lanes.push({ axis: 'z', c: a.x - 4, a: zB, b: zA, count: 5, speed: 9, bus: a.id === 'amsterdam' });
-      lanes.push({ axis: 'z', c: a.x + 4, a: zB, b: zA, count: 4, speed: 10 });
+      lanes.push({ axis: 'z', ave: a.id, c: a.x - 5, a: zB, b: zA, count: 20, speed: 10, bus: true });
+      lanes.push({ axis: 'z', ave: a.id, c: a.x + 2, a: zB, b: zA, count: 18, speed: 11 });
     } else {
       const off = a.median ? a.median / 2 + 4 : a.w / 4;
       const z0 = a.id === 'claremont' ? streetZ(116) : zB;
-      lanes.push({ axis: 'z', c: a.x + off, a: z0, b: zA, count: a.median ? 6 : 2, speed: 10, bus: !!a.median });
-      lanes.push({ axis: 'z', c: a.x - off, a: zA, b: z0, count: a.median ? 6 : 2, speed: 10, bus: !!a.median });
+      const count = a.median ? 22 : a.id === 'claremont' ? 3 : 8;
+      lanes.push({ axis: 'z', ave: a.id, c: a.x + off, a: z0, b: zA, count, speed: 11, bus: !!a.median });
+      lanes.push({ axis: 'z', ave: a.id, c: a.x - off, a: zA, b: z0, count, speed: 11, bus: !!a.median });
     }
   }
-  for (const [n, x0, x1] of [[110, -390, 690], [113, -390, 255], [114, -390, 255], [112, -390, 110], [120, -390, 255]]) {
+  for (const [n, x0, x1, cnt] of [[110, -390, 690, 10], [111, -390, 110, 4], [112, -390, 110, 5], [113, -390, 255, 6], [114, -390, 255, 6], [115, -390, -150, 3], [116, -390, -150, 3], [118, 110, 255, 3], [120, -390, 255, 6]]) {
     const dir = n % 2 === 0 ? 1 : -1; // even streets eastbound, odd westbound
-    lanes.push({ axis: 'x', c: streetZ(n) + (n === 110 ? 4 : 2) * (dir > 0 ? 1 : -1), a: dir > 0 ? x0 : x1, b: dir > 0 ? x1 : x0, count: n === 110 ? 4 : 2, speed: 8 });
-    if (n === 110) lanes.push({ axis: 'x', c: streetZ(n) - 4, a: x1, b: x0, count: 4, speed: 8 });
+    lanes.push({ axis: 'x', n, c: streetZ(n) + (n === 110 ? 4 : 2) * (dir > 0 ? 1 : -1), a: dir > 0 ? x0 : x1, b: dir > 0 ? x1 : x0, count: cnt, speed: 8 });
+    if (n === 110) lanes.push({ axis: 'x', n, c: streetZ(n) - 4, a: x1, b: x0, count: cnt, speed: 8 });
   }
-  lanes.push({ axis: 'z', c: PARKWAY_X - 5, a: -1500, b: 1500, count: 8, speed: 22, y: -6.9 });
-  lanes.push({ axis: 'z', c: PARKWAY_X + 5, a: 1500, b: -1500, count: 8, speed: 22, y: -6.9 });
-  const movers = [];
+  lanes.push({ axis: 'z', c: PARKWAY_X - 5, a: -1500, b: 1500, count: 14, speed: 22, y: -6.9 });
+  lanes.push({ axis: 'z', c: PARKWAY_X + 5, a: 1500, b: -1500, count: 14, speed: 22, y: -6.9 });
   for (const ln of lanes) {
-    const L = Math.abs(ln.b - ln.a);
-    for (let i = 0; i < ln.count; i++) {
-      const kind = ln.bus && i === 0 ? 'bus' : rand() < 0.35 ? 'cab' : 'car';
-      const v = vehicle(kind);
-      movers.push({ v, ln, s: (i / ln.count) * L + between(0, L / ln.count / 2), L, speed: ln.speed * between(0.85, 1.15) });
+    ln.dir = Math.sign(ln.b - ln.a);
+    ln.L = Math.abs(ln.b - ln.a);
+    // junctions this lane passes through, as distances along the lane
+    ln.stops = junctions
+      .filter((j) => (ln.axis === 'z' ? j.ave === ln.ave : j.n === ln.n))
+      .map((j) => ({ j, at: ((ln.axis === 'z' ? j.z : j.x) - ln.a) * ln.dir, half: ln.axis === 'z' ? j.sw / 2 + 5 : j.w / 2 + 4 }))
+      .filter((s) => s.at > 0 && s.at < ln.L)
+      .sort((p, q) => p.at - q.at);
+  }
+  // Vehicle pools: twice the default count of cars/taxis/buses, plus scooters & bikes on city
+  // streets. Only the first N of each pool are active, so the population can be changed live.
+  const movers = [];
+  const carPool = [];
+  const scooterPool = [];
+  const SCOOTER_COLORS = [0xd1342f, 0x1b6fb5, 0x2e2e2e, 0xf2f2f2, 0x2f7d4f, 0xf2994a];
+  for (const ln of lanes) {
+    ln.movers = [];
+    const nCars = ln.count * 2;
+    for (let i = 0; i < nCars; i++) {
+      const kind = ln.bus && i % 7 === 0 ? 'bus' : rand() < 0.33 ? 'cab' : 'car';
+      const mv = { ln, kind, pool: 'car', active: false, len: kind === 'bus' ? 12 : 4.5, wid: kind === 'bus' ? 2.5 : 1.85, s: rand() * ln.L, base: ln.speed * between(0.85, 1.15), v: 0, gap: Infinity, state: 'ok', x: 0, z: -1e5, color: kind === 'cab' ? 0xf2c218 : kind === 'bus' ? 0x2a5caa : pick(CAR_COLORS) };
+      movers.push(mv);
+      ln.movers.push(mv);
+      carPool.push(mv);
+    }
+    if (ln.y) continue; // no scooters on the parkway
+    const nSc = Math.ceil(ln.count * 1.2);
+    for (let i = 0; i < nSc; i++) {
+      const kind = rand() < 0.55 ? 'scooter' : 'bicycle';
+      const mv = { ln, kind, pool: 'scooter', active: false, len: 1.9, wid: 0.8, s: rand() * ln.L, base: (kind === 'scooter' ? 8 : 5) * between(0.85, 1.15), v: 0, gap: Infinity, state: 'ok', x: 0, z: -1e5, color: pick(SCOOTER_COLORS) };
+      movers.push(mv);
+      ln.movers.push(mv);
+      scooterPool.push(mv);
     }
   }
-  updaters.push((dt) => {
-    occupants.vehicles.length = 0;
-    for (const m of movers) {
-      m.s = (m.s + m.speed * dt) % m.L;
-      const dir = Math.sign(m.ln.b - m.ln.a);
-      const p = m.ln.a + dir * m.s;
-      if (m.ln.axis === 'z') { m.v.position.set(m.ln.c, m.ln.y || 0, p); m.v.rotation.y = dir > 0 ? 0 : Math.PI; }
-      else { m.v.position.set(p, 0, m.ln.c); m.v.rotation.y = dir > 0 ? Math.PI / 2 : -Math.PI / 2; }
-      occupants.vehicles.push(m.v.position);
+  // spread activation across lanes: interleave by shuffling
+  const shuffle = (arr) => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
+  shuffle(carPool);
+  shuffle(scooterPool);
+  const population = { cars: Math.round(carPool.length / 2), scooters: Math.round(scooterPool.length * 0.35), people: 560 };
+  function applyVehiclePopulation() {
+    carPool.forEach((m, i) => activate(m, i < population.cars));
+    scooterPool.forEach((m, i) => activate(m, i < population.scooters));
+  }
+  function activate(m, on) {
+    if (m.active === on) return;
+    m.active = on;
+    if (on) {
+      // enter the street in the largest free gap of its lane
+      const others = m.ln.movers.filter((o) => o.active && o !== m).map((o) => o.s).sort((p2, q2) => p2 - q2);
+      if (others.length) {
+        let best = 0, bestGap = -1;
+        for (let i = 0; i < others.length; i++) {
+          const gapLen = ((others[(i + 1) % others.length] - others[i] + m.ln.L) % m.ln.L) || m.ln.L;
+          if (gapLen > bestGap) { bestGap = gapLen; best = others[i]; }
+        }
+        m.s = (best + bestGap / 2) % m.ln.L;
+      }
+      m.v = m.base * 0.6;
+    } else {
+      m.z = -1e5;
     }
-  });
+  }
+  const cars = movers.filter((m) => m.pool === 'car' && m.kind !== 'bus');
+  const buses = movers.filter((m) => m.kind === 'bus');
+  const scooters = movers.filter((m) => m.pool === 'scooter');
+  const scBody = new THREE.InstancedMesh(new THREE.BoxGeometry(0.55, 0.55, 1.75), mat(0xffffff, { roughness: 0.4, metalness: 0.3 }), scooters.length);
+  const scRider = new THREE.InstancedMesh(new THREE.BoxGeometry(0.42, 0.7, 0.32), mat(0x26303a), scooters.length);
+  const scHead = new THREE.InstancedMesh(new THREE.SphereGeometry(0.19, 10, 8), mat(0x1d1d1f), scooters.length);
+  scooters.forEach((c, i) => scBody.setColorAt(i, col.set(c.color)));
+  [scBody, scRider, scHead].forEach((im) => { im.castShadow = true; im.frustumCulled = false; scene.add(im); });
+  applyVehiclePopulation();
+  const carBody = new THREE.InstancedMesh(new THREE.BoxGeometry(1.85, 0.85, 4.5), mat(0xffffff, { roughness: 0.35, metalness: 0.35 }), cars.length);
+  const carCabin = new THREE.InstancedMesh(new THREE.BoxGeometry(1.65, 0.62, 2.3), mat(0x26303a, { roughness: 0.2, metalness: 0.5 }), cars.length);
+  const carWheels = new THREE.InstancedMesh(new THREE.BoxGeometry(1.95, 0.7, 0.7), mat(0x151515), cars.length * 2);
+  const cabSign = new THREE.InstancedMesh(new THREE.BoxGeometry(0.9, 0.25, 0.3), mat(0xffffff, { emissive: 0xffffaa, emissiveIntensity: 0.3 }), cars.length);
+  const busBody = new THREE.InstancedMesh(new THREE.BoxGeometry(2.5, 2.8, 12), mat(0xffffff, { roughness: 0.35, metalness: 0.3 }), Math.max(1, buses.length));
+  const busWin = new THREE.InstancedMesh(new THREE.BoxGeometry(2.55, 0.9, 10.5), mat(0x1f2730, { roughness: 0.2, metalness: 0.5 }), Math.max(1, buses.length));
+  cars.forEach((c, i) => carBody.setColorAt(i, col.set(c.color)));
+  buses.forEach((b, i) => busBody.setColorAt(i, col.set(b.color)));
+  [carBody, carCabin, carWheels, busBody, busWin].forEach((im) => { im.castShadow = true; im.frustumCulled = false; scene.add(im); });
+  cabSign.frustumCulled = false;
+  scene.add(cabSign);
 
-  // ----- Pedestrians ------------------------------------------------------------
-  const PED = 340;
+  // Boundaries ("too close" zones) drawn on the ground around vehicles and people.
+  const ringGeo = new THREE.RingGeometry(0.86, 1, 36).rotateX(-Math.PI / 2);
+  const discGeo = new THREE.CircleGeometry(1, 36).rotateX(-Math.PI / 2);
+  const bMat = () => new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, depthWrite: false, toneMapped: false });
+  const vRing = new THREE.InstancedMesh(ringGeo, bMat(), movers.length);
+  const vDisc = new THREE.InstancedMesh(discGeo, Object.assign(bMat(), { opacity: 0.18 }), movers.length);
+  [vRing, vDisc].forEach((im) => { im.frustumCulled = false; im.renderOrder = 3; scene.add(im); });
+  const STATE_COLOR = { ok: new THREE.Color(0x2ecc71), close: new THREE.Color(0xf5a623), danger: new THREE.Color(0xe8352a), signal: new THREE.Color(0x4a90e2) };
+  let showBoundaries = true;
+
+  // obstacles the traffic must respect (pedestrians in the road, delivery riders)
+  let externalObstacles = [];
+  const roadPeds = [];
+
+  const q = new THREE.Quaternion();
+  const up = new THREE.Vector3(0, 1, 0);
+  const sc = new THREE.Vector3();
+  const ps = new THREE.Vector3();
+  function stepTraffic(dt) {
+    const obstacles = [...roadPeds, ...externalObstacles];
+    for (const ln of lanes) {
+      const arr = ln.movers.filter((m) => m.active);
+      arr.sort((p, q2) => p.s - q2.s);
+      for (let i = 0; i < arr.length; i++) {
+        const m = arr[i];
+        const leader = arr.length > 1 ? arr[(i + 1) % arr.length] : null;
+        let gapCar = leader ? ((leader.s - m.s + ln.L) % ln.L) - (leader.len + m.len) / 2 : Infinity;
+        // red / yellow light ahead: treat the stop line as an obstacle
+        let gapSignal = Infinity;
+        for (const st of ln.stops) {
+          const ahead = st.at - st.half - m.s - m.len / 2;
+          if (ahead < -1) continue;
+          if (ahead > 60) break;
+          const s = signalState(st.j, simT)[ln.axis === 'z' ? 'ns' : 'ew'];
+          if (s === 'red' || (s === 'yellow' && ahead > m.v * 1.2)) gapSignal = ahead;
+          break;
+        }
+        // people or riders in the lane ahead
+        let gapObs = Infinity;
+        const px = ln.axis === 'z' ? ln.c : ln.a + ln.dir * m.s;
+        const pz = ln.axis === 'z' ? ln.a + ln.dir * m.s : ln.c;
+        for (const o of obstacles) {
+          const along = ((ln.axis === 'z' ? o.z - pz : o.x - px) * ln.dir);
+          const lat = Math.abs(ln.axis === 'z' ? o.x - ln.c : o.z - ln.c);
+          if (lat < m.wid / 2 + 0.9 && along > 0 && along < 40) gapObs = Math.min(gapObs, along - m.len / 2 - 1);
+        }
+        const gapDyn = Math.min(gapCar, gapObs);
+        const gap = Math.min(gapDyn, gapSignal);
+        const target = Math.max(0, Math.min(m.base, (gap - 2) / 1.2));
+        m.v += THREE.MathUtils.clamp(target - m.v, -9 * dt, 2.5 * dt);
+        if (gap < 0.3) m.v = 0;
+        m.s = (m.s + m.v * dt) % ln.L;
+        m.gap = gapDyn;
+        m.state = gapDyn < 2 ? 'danger' : gapDyn < 4 + m.v * 1.2 ? 'close' : gapSignal < 25 && m.v < 1 ? 'signal' : 'ok';
+        m.x = ln.axis === 'z' ? ln.c : ln.a + ln.dir * m.s;
+        m.z = ln.axis === 'z' ? ln.a + ln.dir * m.s : ln.c;
+      }
+    }
+  }
+  function drawTraffic() {
+    let ci = 0, bi = 0, si = 0;
+    movers.forEach((m, k) => {
+      if (!m.active) {
+        m4.makeScale(0, 0, 0);
+        if (m.pool === 'scooter') { scBody.setMatrixAt(si, m4); scRider.setMatrixAt(si, m4); scHead.setMatrixAt(si, m4); si++; }
+        else if (m.kind === 'bus') { busBody.setMatrixAt(bi, m4); busWin.setMatrixAt(bi, m4); bi++; }
+        else { carBody.setMatrixAt(ci, m4); carCabin.setMatrixAt(ci, m4); carWheels.setMatrixAt(ci * 2, m4); carWheels.setMatrixAt(ci * 2 + 1, m4); cabSign.setMatrixAt(ci, m4); ci++; }
+        vRing.setMatrixAt(k, m4);
+        vDisc.setMatrixAt(k, m4);
+        return;
+      }
+      const ry = m.ln.axis === 'z' ? (m.ln.dir > 0 ? 0 : Math.PI) : m.ln.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+      q.setFromAxisAngle(up, ry);
+      const y = m.ln.y || 0;
+      const fwd = (o) => [Math.sin(ry) * o, Math.cos(ry) * o];
+      if (m.pool === 'scooter') {
+        m4.compose(ps.set(m.x, y + 0.6, m.z), q, sc.set(1, 1, m.kind === 'bicycle' ? 0.9 : 1));
+        scBody.setMatrixAt(si, m4);
+        m4.compose(ps.set(m.x, y + 1.3, m.z), q, sc.set(1, 1, 1));
+        scRider.setMatrixAt(si, m4);
+        m4.compose(ps.set(m.x, y + 1.85, m.z), q, sc.set(1, 1, 1));
+        scHead.setMatrixAt(si, m4);
+        si++;
+      } else if (m.kind === 'bus') {
+        m4.compose(ps.set(m.x, y + 1.75, m.z), q, sc.set(1, 1, 1));
+        busBody.setMatrixAt(bi, m4);
+        m4.compose(ps.set(m.x, y + 2.4, m.z), q, sc.set(1, 1, 1));
+        busWin.setMatrixAt(bi, m4);
+        bi++;
+      } else {
+        m4.compose(ps.set(m.x, y + 0.78, m.z), q, sc.set(1, 1, 1));
+        carBody.setMatrixAt(ci, m4);
+        const [cx, cz] = fwd(-0.2);
+        m4.compose(ps.set(m.x + cx, y + 1.5, m.z + cz), q, sc.set(1, 1, 1));
+        carCabin.setMatrixAt(ci, m4);
+        for (const [w, o] of [[0, 1.25], [1, -1.25]]) {
+          const [wx, wz] = fwd(o);
+          m4.compose(ps.set(m.x + wx, y + 0.35, m.z + wz), q, sc.set(1, 1, 1));
+          carWheels.setMatrixAt(ci * 2 + w, m4);
+        }
+        m4.compose(ps.set(m.x + cx, m.kind === 'cab' ? y + 1.95 : -50, m.z + cz), q, sc.set(1, 1, 1));
+        cabSign.setMatrixAt(ci, m4);
+        ci++;
+      }
+      // boundary: an ellipse around the footprint plus a buffer
+      m4.compose(ps.set(m.x, y + 0.22, m.z), q, sc.set(showBoundaries ? m.wid / 2 + 1.3 : 0, 1, showBoundaries ? m.len / 2 + 1.8 : 0));
+      vRing.setMatrixAt(k, m4);
+      vDisc.setMatrixAt(k, m4);
+      vRing.setColorAt(k, STATE_COLOR[m.state]);
+      vDisc.setColorAt(k, STATE_COLOR[m.state]);
+    });
+    [carBody, carCabin, carWheels, cabSign, busBody, busWin, scBody, scRider, scHead, vRing, vDisc].forEach((im) => (im.instanceMatrix.needsUpdate = true));
+    vRing.instanceColor.needsUpdate = vDisc.instanceColor.needsUpdate = true;
+  }
+
+  // ----- Pedestrians (walk sidewalks, wait for the walk signal, cross at crosswalks) -----
+  const peds = [];
+  const sideHasStreet = (n, a, side) => {
+    const aves = avesAt(n);
+    const i = aves.indexOf(a);
+    const other = aves[i + side];
+    return !!other && streetKind(n, side < 0 ? other : a, side < 0 ? a : other) === 'road';
+  };
+  const jAt = (aveId, n) => junctions.find((j) => j.ave === aveId && j.n === n);
+  for (let i = 0; i < 1100; i++) {
+    const r = rand();
+    let p;
+    if (r < 0.1) {
+      const z = streetZ(116) + between(-6, 6);
+      p = { axis: 'x', c: z, lo: -120, hi: 90, y: 0.6, crossings: [] };
+    } else if (r < 0.62) {
+      // along an avenue sidewalk, crossing side streets
+      const a = pick(AVENUES.filter((v) => v.id !== 'claremont'));
+      const side = rand() < 0.5 ? -1 : 1;
+      const n0 = Math.floor(between(Math.max(a.from, 108), Math.min(a.to, 118)));
+      const span = 1 + Math.floor(rand() * 3);
+      const x = a.x + side * (a.w / 2 + between(1.4, 3.6));
+      const crossings = [];
+      for (let n = n0 + 1; n < n0 + span; n++) {
+        if (!sideHasStreet(n, a, side)) continue;
+        const j = jAt(a.id, n);
+        if (j) crossings.push({ lo: streetZ(n) - streetWidth(n) / 2 - 1.2, hi: streetZ(n) + streetWidth(n) / 2 + 1.2, kind: 'ns', j });
+      }
+      p = { axis: 'z', c: x, lo: streetZ(n0 + span) + 10, hi: streetZ(n0) - 10, y: 0.16, crossings };
+    } else {
+      // along a street sidewalk, crossing an avenue
+      const n = 108 + Math.floor(rand() * 13);
+      const aves = avesAt(n);
+      const k = Math.floor(rand() * (aves.length - 1));
+      const A = aves[k], B = aves[k + 1];
+      if (streetKind(n, A, B) !== 'road') { i--; continue; }
+      const side = rand() < 0.5 ? -1 : 1;
+      const z = streetZ(n) + side * (streetWidth(n) / 2 + between(1.4, 3.2));
+      const crossings = [];
+      let lo = A.x + A.w / 2 + 3, hi = B.x - B.w / 2 - 3;
+      const C = aves[k + 2];
+      if (C && streetKind(n, B, C) === 'road') {
+        hi = Math.min(B.x + B.w / 2 + 60, C.x - C.w / 2 - 3);
+        const j = jAt(B.id, n);
+        if (j) crossings.push({ lo: B.x - B.w / 2 - 1.2, hi: B.x + B.w / 2 + 1.2, kind: 'ew', j });
+      }
+      p = { axis: 'x', c: z, lo, hi, y: 0.16, crossings };
+    }
+    p.pos = between(p.lo, p.hi);
+    p.dir = rand() < 0.5 ? -1 : 1;
+    p.speed = between(1.1, 1.6);
+    p.jay = rand() < 0.04; // a few people cross against the light
+    p.waiting = false;
+    p.inRoad = false;
+    p.near = Infinity;
+    peds.push(p);
+  }
+  const PED = peds.length;
   const pedBody = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.24, 1.0, 3, 8), mat(0xffffff), PED);
   const pedHead = new THREE.InstancedMesh(new THREE.SphereGeometry(0.17, 10, 8), mat(0xffffff), PED);
+  const pRing = new THREE.InstancedMesh(ringGeo, bMat(), PED);
+  [pedBody, pedHead, pRing].forEach((im) => { im.frustumCulled = false; scene.add(im); });
   pedBody.castShadow = true;
-  const peds = [];
+  pRing.renderOrder = 3;
   const SKIN = [0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0xffdbac];
   const CLOTH = [0x1d1d1f, 0x2f4f7f, 0x7d1e1e, 0x5c6b59, 0xc2b59b, 0x8b6fae, 0xd97a2b, 0x9fb7c9, 0x6d6d6d, 0x1f6f8b];
-  const col = new THREE.Color();
-  for (let i = 0; i < PED; i++) {
-    let p;
-    const r = rand();
-    if (r < 0.18) { // College Walk and the Low steps area
-      const z = streetZ(116) + between(-6, 6);
-      p = { x0: -120, z0: z, x1: 90, z1: z, y: 0.6 };
-    } else if (r < 0.26) {
-      const x = between(-80, 50);
-      p = { x0: x, z0: -205, x1: x + between(-20, 20), z1: -150, y: 0.6 };
-    } else {
-      // a random avenue sidewalk segment
-      const a = pick(AVENUES.filter((v) => v.id !== 'morningsideAve'));
-      const side = rand() < 0.5 ? -1 : 1;
-      if (a.id === 'morningsideDr' && side > 0) continue;
-      const x = a.x + side * (a.w / 2 + between(1.2, 3.5));
-      const n = Math.floor(between(Math.max(a.from, 108), Math.min(a.to, 120)));
-      p = { x0: x, z0: streetZ(n + 1), x1: x, z1: streetZ(n), y: 0.16 };
+  peds.forEach((p, i) => { pedBody.setColorAt(i, col.set(pick(CLOTH))); pedHead.setColorAt(i, col.set(pick(SKIN))); });
+
+  const activePeds = () => peds.slice(0, population.people);
+  function stepPeds(dt) {
+    roadPeds.length = 0;
+    for (const p of activePeds()) {
+      let next = p.pos + p.dir * p.speed * dt;
+      p.waiting = false;
+      for (const c of p.crossings) {
+        const entering = p.dir > 0 ? p.pos <= c.lo && next > c.lo : p.pos >= c.hi && next < c.hi;
+        if (entering && !p.jay && signalState(c.j, simT)[c.kind] !== 'green') { next = p.pos; p.waiting = true; }
+      }
+      if (next > p.hi || next < p.lo) { p.dir = -p.dir; next = THREE.MathUtils.clamp(next, p.lo, p.hi); }
+      p.pos = next;
+      p.inRoad = p.crossings.some((c) => p.pos > c.lo + 1 && p.pos < c.hi - 1);
+      p.x = p.axis === 'z' ? p.c : p.pos;
+      p.z = p.axis === 'z' ? p.pos : p.c;
+      if (p.inRoad) roadPeds.push(p);
     }
-    p.t = rand();
-    p.v = between(0.012, 0.03) * (rand() < 0.5 ? 1 : -1) * (84 / Math.max(20, Math.hypot(p.x1 - p.x0, p.z1 - p.z0)));
-    peds.push(p);
-    pedBody.setColorAt(peds.length - 1, col.set(pick(CLOTH)));
-    pedHead.setColorAt(peds.length - 1, col.set(pick(SKIN)));
   }
-  pedBody.count = pedHead.count = peds.length;
-  scene.add(pedBody, pedHead);
-  const m4 = new THREE.Matrix4();
-  updaters.push((dt, t) => {
-    occupants.people.length = 0;
+  function drawPeds(t) {
     peds.forEach((p, i) => {
-      p.t += p.v * dt;
-      if (p.t > 1 || p.t < 0) { p.v = -p.v; p.t = THREE.MathUtils.clamp(p.t, 0, 1); }
-      const x = p.x0 + (p.x1 - p.x0) * p.t;
-      const z = p.z0 + (p.z1 - p.z0) * p.t;
-      const bob = Math.abs(Math.sin(t * 8 + i)) * 0.05;
-      m4.makeTranslation(x, p.y + 0.74 + bob, z);
+      if (i >= population.people) {
+        m4.makeScale(0, 0, 0);
+        pedBody.setMatrixAt(i, m4);
+        pedHead.setMatrixAt(i, m4);
+        pRing.setMatrixAt(i, m4);
+        return;
+      }
+      const bob = p.waiting ? 0 : Math.abs(Math.sin(t * 8 + i)) * 0.05;
+      m4.makeTranslation(p.x, p.y + 0.74 + bob, p.z);
       pedBody.setMatrixAt(i, m4);
-      m4.makeTranslation(x, p.y + 1.62 + bob, z);
+      m4.makeTranslation(p.x, p.y + 1.62 + bob, p.z);
       pedHead.setMatrixAt(i, m4);
-      occupants.people.push({ x, z });
+      const s = showBoundaries ? 0.9 : 0;
+      m4.compose(ps.set(p.x, p.y + 0.05, p.z), q.identity(), sc.set(s, 1, s));
+      pRing.setMatrixAt(i, m4);
+      pRing.setColorAt(i, p.near < 2 ? STATE_COLOR.danger : p.inRoad || p.near < 4 ? STATE_COLOR.close : p.waiting ? STATE_COLOR.signal : STATE_COLOR.ok);
     });
-    pedBody.instanceMatrix.needsUpdate = true;
-    pedHead.instanceMatrix.needsUpdate = true;
+    pedBody.instanceMatrix.needsUpdate = pedHead.instanceMatrix.needsUpdate = pRing.instanceMatrix.needsUpdate = true;
+    pRing.instanceColor.needsUpdate = true;
+  }
+  // people standing in the road are flagged if a vehicle is close
+  function pedDanger() {
+    for (const p of activePeds()) {
+      p.near = Infinity;
+      if (!p.inRoad) continue;
+      for (const m of movers) {
+        if (!m.active) continue;
+        const d = Math.hypot(m.x - p.x, m.z - p.z) - m.len / 2;
+        if (d < p.near) p.near = d;
+      }
+    }
+  }
+
+  updaters.push((dt, t, dtSim) => {
+    // sub-step so fast-forward stays stable
+    const steps = Math.min(8, Math.max(1, Math.ceil(dtSim / 0.2)));
+    for (let k = 0; k < steps; k++) {
+      simT += dtSim / steps;
+      stepPeds(dtSim / steps);
+      stepTraffic(dtSim / steps);
+    }
+    pedDanger();
+    drawTraffic();
+    drawPeds(t);
+    lampTimer += dt;
+    if (lampTimer > 0.25) { lampTimer = 0; paintSignals(); }
+    occupants.vehicles.length = 0;
+    for (const m of movers) if (m.active) occupants.vehicles.push({ x: m.x, z: m.z });
+    occupants.people.length = 0;
+    for (const p of activePeds()) occupants.people.push({ x: p.x, z: p.z });
   });
+
+  // ----- Perception: what an agent at (x, z) can sense -------------------------------
+  function perceive(x, z, R, heading = null) {
+    const out = { vehicles: [], people: [], buildings: [], signals: [], trees: [], lamps: [] };
+    for (const m of movers) {
+      if (!m.active) continue;
+      const d = Math.hypot(m.x - x, m.z - z);
+      if (d < R + m.len / 2) out.vehicles.push({ kind: m.kind, x: m.x, z: m.z, d: Math.max(0, d - m.len / 2 + 0.3), v: m.v });
+    }
+    for (const p of activePeds()) {
+      const d = Math.hypot(p.x - x, p.z - z);
+      if (d < R) out.people.push({ x: p.x, z: p.z, d: Math.max(0, d - 0.3), inRoad: p.inRoad, waiting: p.waiting });
+    }
+    for (const b of staticIndex.query(x, z, R, 'building')) {
+      const dx = Math.max(b.x0 - x, 0, x - b.x1), dz = Math.max(b.z0 - z, 0, z - b.z1);
+      const d = Math.hypot(dx, dz);
+      if (d < R) out.buildings.push({ d, x: THREE.MathUtils.clamp(x, b.x0, b.x1), z: THREE.MathUtils.clamp(z, b.z0, b.z1), name: b.name });
+    }
+    for (const kind of ['tree', 'lamp']) {
+      for (const o of staticIndex.query(x, z, R, kind)) {
+        const d = Math.hypot(o.x - x, o.z - z);
+        if (d < R) out[kind + 's'].push({ d, x: o.x, z: o.z });
+      }
+    }
+    for (const j of junctions) {
+      const d = Math.hypot(j.x - x, j.z - z);
+      if (d < R + 25) {
+        const s = signalState(j, simT);
+        let facing = null;
+        if (heading) {
+          const along = (j.x - x) * heading.x + (j.z - z) * heading.z;
+          facing = along > 0 ? (Math.abs(heading.z) > Math.abs(heading.x) ? s.ns : s.ew) : null;
+        }
+        out.signals.push({ d, x: j.x, z: j.z, name: j.name, ns: s.ns, ew: s.ew, facing });
+      }
+    }
+    for (const k of Object.keys(out)) out[k].sort((a, b) => a.d - b.d);
+    return out;
+  }
+
+  // The next junction ahead of a moving agent, with its light and the distance to the stop line.
+  function signalAhead(x, z, heading, range = 50) {
+    let best = null;
+    const ns = Math.abs(heading.z) > Math.abs(heading.x);
+    for (const j of junctions) {
+      const along = (j.x - x) * heading.x + (j.z - z) * heading.z;
+      const lat = Math.abs((j.x - x) * heading.z - (j.z - z) * heading.x);
+      const half = ns ? j.sw / 2 + 4 : j.w / 2 + 3;
+      if (lat > (ns ? j.w / 2 + 6 : j.sw / 2 + 6) || along - half < -1.5 || along > range) continue;
+      if (!best || along < best.along) best = { j, along, stop: along - half, state: signalState(j, simT)[ns ? 'ns' : 'ew'], name: j.name };
+    }
+    return best;
+  }
 
   // ----- Animals: gulls over the Hudson, pigeons on College Walk, ducks on the pond -----
   const gullMat = mat(0xf4f4f4);
@@ -1099,8 +1453,40 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
       if (x < RIVERSIDE_W) return rpH(x);
       return 0.16;
     },
-    update(dt, t, target) {
-      for (const fn of updaters) fn(dt, t);
+    perceive,
+    signalAhead,
+    setObstacles(list) { externalObstacles = list; },
+    setBoundaries(on) { showBoundaries = on; },
+    get simTime() { return simT; },
+    // Street population controls
+    population: () => ({ ...population, max: { cars: carPool.length, scooters: scooterPool.length, people: peds.length } }),
+    setPopulation(next) {
+      Object.assign(population, next);
+      population.cars = THREE.MathUtils.clamp(Math.round(population.cars), 0, carPool.length);
+      population.scooters = THREE.MathUtils.clamp(Math.round(population.scooters), 0, scooterPool.length);
+      population.people = THREE.MathUtils.clamp(Math.round(population.people), 0, peds.length);
+      applyVehiclePopulation();
+    },
+    stats() {
+      const act = movers.filter((m) => m.active);
+      const ap = activePeds();
+      return {
+        vehicles: act.length,
+        cars: act.filter((m) => m.pool === 'car').length,
+        scooters: act.filter((m) => m.pool === 'scooter').length,
+        stopped: act.filter((m) => m.state === 'signal').length,
+        close: act.filter((m) => m.state === 'close').length,
+        danger: act.filter((m) => m.state === 'danger').length,
+        people: ap.length,
+        crossing: ap.filter((p) => p.inRoad).length,
+        waiting: ap.filter((p) => p.waiting).length,
+        jaywalking: ap.filter((p) => p.inRoad && p.jay).length,
+        pedsAtRisk: ap.filter((p) => p.near < 4).length,
+        signals: junctions.length,
+      };
+    },
+    update(dt, t, target, dtSim = dt) {
+      for (const fn of updaters) fn(dt, t, dtSim);
       for (const l of placeLabels) l.visible = !l.userData.minor || camera.position.distanceTo(l.position) < 650;
       sun.target.position.copy(target);
       sun.position.copy(target).addScaledVector(sunDir, 700);

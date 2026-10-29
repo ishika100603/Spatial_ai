@@ -16,9 +16,36 @@ Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it,
 #fd3d .fd-left > * { pointer-events: auto; }
 #fd3d .fd-status { padding: 10px 12px; }
 #fd3d .fd-loc { padding: 10px 12px; overflow: auto; min-height: 0; flex: 1 1 auto; }
-#fd3d.fd-hide-loc .fd-loc, #fd3d .fd-dist { display: none; }
+#fd3d.fd-hide-loc .fd-loc, #fd3d .fd-dist, #fd3d .fd-prox { display: none; }
+#fd3d.fd-mode-proximity .fd-left { width: 400px; }
+#fd3d.fd-mode-proximity .fd-loc { display: none; }
+#fd3d.fd-mode-proximity .fd-prox { display: block; padding: 10px 12px; overflow: auto; min-height: 0; flex: 1 1 auto; }
+#fd3d .fd-prox .fd-inline button { margin: 0; }
+#fd3d .fd-pbar { position: relative; display: flex; height: 26px; margin: 10px 0 4px; border-radius: 7px; overflow: visible; }
+#fd3d .fd-pbar-seg { flex: 1; display: grid; place-items: center; color: #fff; font: 800 10.5px system-ui; letter-spacing: .08em; }
+#fd3d .fd-pbar-seg.low { background: #f2c94c; border-radius: 7px 0 0 7px; color: #5a4a00; }
+#fd3d .fd-pbar-seg.medium { background: #f2994a; }
+#fd3d .fd-pbar-seg.extreme { background: #e8352a; border-radius: 0 7px 7px 0; }
+#fd3d .fd-pbar i { position: absolute; top: -5px; bottom: -5px; width: 4px; margin-left: -2px; background: #1d1d1f; border-radius: 2px; box-shadow: 0 0 0 2px #fff; transition: left .25s; }
+#fd3d .fd-plevel { font-weight: 800; margin-top: 6px; }
+#fd3d .fd-paction { background: #f3f3f1; border-radius: 6px; padding: 5px 8px; margin: 5px 0; font-weight: 600; }
+#fd3d .fd-zones { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: #444; margin: 4px 0; }
+#fd3d .fd-zones span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--c); margin-right: 4px; vertical-align: -2px; }
+#fd3d .fd-perc { display: grid; grid-template-columns: auto 30px 1fr; gap: 2px 8px; font-size: 12px; align-items: baseline; }
+#fd3d .fd-perc b { text-align: right; }
+#fd3d .fd-perc span { color: #555; }
+#fd3d .fd-light { display: inline-block; width: 9px; height: 9px; border-radius: 50%; vertical-align: 0; }
+#fd3d .fd-light-green { background: #22c55e; } #fd3d .fd-light-yellow { background: #f5b301; } #fd3d .fd-light-red { background: #ef2b1d; }
+#fd3d .fd-slider { display: grid; grid-template-columns: 150px 1fr 40px; align-items: center; gap: 6px; font-size: 12px; margin: 2px 0; }
+#fd3d .fd-slider input { width: 100%; margin: 0; padding: 0; accent-color: #1d1d1f; }
+#fd3d .fd-slider b { text-align: right; }
+#fd3d .fd-rule { font-size: 12px; padding: 5px 7px; margin: 3px 0; border-radius: 6px; background: #f6f6f4; border-left: 3px solid #ddd; }
+#fd3d .fd-rule.on { background: #fff1e6; border-left-color: #f2994a; }
+#fd3d .fd-rule small { display: block; color: #777; font-size: 10.5px; margin-top: 1px; }
+#fd3d .fd-if, #fd3d .fd-then, #fd3d .fd-else { font: 800 10px system-ui; padding: 1px 4px; border-radius: 3px; color: #1d1d1f; }
+#fd3d .fd-if { background: #f2c94c; } #fd3d .fd-then { background: #6fcf97; } #fd3d .fd-else { background: #eb5757; color: #fff; }
 #fd3d.fd-mode-distance .fd-left { width: 440px; }
-#fd3d.fd-mode-distance .fd-status, #fd3d.fd-mode-distance .fd-loc { display: none; }
+#fd3d.fd-mode-distance .fd-loc { display: none; }
 #fd3d.fd-mode-distance .fd-dist { display: block; padding: 10px 12px; overflow: auto; min-height: 0; flex: 1 1 auto; }
 #fd3d .fd-plan-wrap { border-radius: 8px; overflow: hidden; border: 1px solid #ddd; }
 #fd3d .fd-plan { display: block; width: 100%; height: auto; aspect-ratio: 1110 / 1098; cursor: crosshair; }
@@ -121,6 +148,7 @@ Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it,
       <div class="fd-tabbody"></div>
     </div>
     <div class="fd-dist fd-card"></div>
+    <div class="fd-prox fd-card"></div>
   </div>
   <div class="fd-panel fd-card"></div>
   <div class="fd-toasts"></div>
@@ -129,7 +157,8 @@ Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it,
     <button data-tool="track">▶ TRACK DELIVERY</button>
     <button data-tool="receiveOrder">RECEIVE ORDER</button>
     <button data-tool="pay">RECEIVE PAYMENT</button>
-    <button data-tool="distance" class="on">DISTANCE</button>
+    <button data-tool="proximity" class="on">PROXIMITY</button>
+    <button data-tool="distance">DISTANCE</button>
     <button data-tool="locate">LOCATE</button>
     <button data-tool="assist">ASSISTANCE</button>
     <button data-tool="profile">PROFILE</button>
@@ -141,7 +170,7 @@ Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it,
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
 </script>
-<script type="module" src="food-delivery-3d.js?v=6"></script>
+<script type="module" src="food-delivery-3d.js?v=7"></script>
 
 ## What you are looking at
 
@@ -156,6 +185,8 @@ Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it,
 **Location questions** (left panel): 1 · where is a referent (e.g. the parcel)? 2 · what occupies a junction or a clicked spot? 3 · where is an occupant in a chosen frame of reference (street grid, landmark, customer, rider, lat/long)? 4 · turn a description like "the Indian place near the cathedral" into a specific junction.
 
 **Distance** (DISTANCE panel, open by default): a 2D plan of the neighbourhood with three pickups (P1–P3) and three deliveries (D1–D3). Each route follows the streets and avenues and is coloured on a long → short gradient. For each route the metrics give the streets and avenues apart, the road distance against the straight-line distance, the commute mode (switchable: walking, bicycle, bike, car) and the time. **Road closures** (toggle them, or click a street on the plan) force a de-route: the fastest-if-open route is drawn dashed and the extra metres and minutes are shown. Barricades also appear in the 3D streets.
+
+**Proximity** (PROXIMITY panel, open by default): every delivery partner carries boundary rings for extreme, medium and low proximity, sized to its commute type, plus a 30 m sensing range. It perceives the cars, buses, pedestrians, other riders, buildings, traffic lights, street trees and lamps around it, and an intensity bar (low → medium → extreme) floats above it. The rules fire live: it stops when something is inside the extreme zone ahead, slows inside the medium zone, rides with caution inside the low zone, stops at red lights and yields to people crossing. Traffic is part of the simulation, and sliders set how many cars/taxis/buses, scooters & bikes and pedestrians are on the streets (or pick Quiet / Normal / Rush hour): lights cycle, cars keep a following distance and brake for people and riders, and pedestrians wait for the walk signal (a few jaywalk). Vehicles and pedestrians have boundaries too: green clear, amber too close, red danger, blue waiting at a light.
 
 **Time:** each restaurant has a preparation time and each rider a speed for their commute type; routes follow real streets, so the estimated delivery time = preparation + rider to restaurant + ride to customer.
 

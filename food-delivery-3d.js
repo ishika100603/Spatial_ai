@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createCity, textSprite } from './food-delivery-city.js?v=6';
+import { createCity, textSprite } from './food-delivery-city.js?v=7';
 import {
   AVENUES, STREETS, BLOCK, LANDMARKS, streetZ, streetShort, junction, route, describe, relativeTo,
   nearestLandmark, egocentric, toLatLon, parsePlace, nearestJunction, avenue, CLOSURES, NODES, edgeById, streetWidth,
-} from './food-delivery-location.js?v=6';
-import { createDistancePanel, PRESET_CLOSURES } from './food-delivery-distance.js?v=6';
+} from './food-delivery-location.js?v=7';
+import { createDistancePanel, PRESET_CLOSURES } from './food-delivery-distance.js?v=7';
+import { createProximity } from './food-delivery-proximity.js?v=7';
 
 // ===========================================================================
 // 1. Semantic data — entities, attributes, relationships (no Three.js here)
@@ -16,7 +17,7 @@ const P = (x, z) => ({ x, z });
 function initialModel() {
   return {
     deliveryPartners: [
-      { id: 'DP01', type: 'DeliveryPartner', name: 'Arjun', rating: 4.8, commuteType: 'Bike', vehicle: 'Motorbike', tips: 12.5, position: P(-140, streetZ(110) - 30), heading: P(0, -1) },
+      { id: 'DP01', type: 'DeliveryPartner', name: 'Arjun', rating: 4.8, commuteType: 'Bike', vehicle: 'Motorbike', tips: 12.5, position: P(-130, streetZ(110) - 30), heading: P(0, -1) },
       { id: 'DP02', type: 'DeliveryPartner', name: 'Maya', rating: 4.6, commuteType: 'Car', vehicle: 'Toyota Prius', tips: 8.0, position: P(116, streetZ(115) + 30), heading: P(0, -1) },
       { id: 'DP03', type: 'DeliveryPartner', name: 'Leo', rating: 4.9, commuteType: 'Bicycle', vehicle: 'E-bike', tips: 15.25, position: P(249, streetZ(117) + 20), heading: P(0, 1) },
     ],
@@ -69,7 +70,11 @@ const ADVANCED = ['Accepted', 'Preparing', 'Ready for Pickup', 'Picked Up', 'Out
 function customerViewFor(viewer, customer) {
   const order = model.orders.find((o) => o.customer === customer.id && o.active && (o.deliveryPartner === viewer.id || o.restaurant === viewer.id));
   let allowed = [];
-  if (viewer.type === 'DeliveryPartner') allowed = order && ADVANCED.includes(order.status) ? ['address', 'instructions', 'orderNumber'] : ['orderNumber'];
+  if (viewer.type === 'DeliveryPartner') {
+    // Proximity rule: the buzzer / apartment instructions are only revealed within 1 block of the door.
+    const near = Math.hypot(viewer.position.x - anchorOf(customer).x, viewer.position.z - anchorOf(customer).z) < BLOCK;
+    allowed = order && ADVANCED.includes(order.status) ? ['address', 'orderNumber', ...(near ? ['instructions'] : [])] : ['orderNumber'];
+  }
   else if (viewer.type === 'Restaurant') allowed = ['orderNumber'];
   else if (viewer.type === 'UberEats') allowed = ['address', 'instructions', 'orderNumber', 'membership'];
   const all = { ...customer.delivery, ...customer.profile };
@@ -388,30 +393,45 @@ function occupantsAt(x, z, radius = 45) {
 // 5. Time: routes, travel and preparation
 // ===========================================================================
 let simMin = 12 * 60; // 12:00 noon
-let timeScale = 30; // simulated seconds per real second
+let timeScale = 10; // simulated seconds per real second (traffic, people, lights, riders and kitchens share one clock)
 const clockText = (min) => { const h = Math.floor(min / 60) % 24; const mm = Math.floor(min % 60); return `${((h + 11) % 12) + 1}:${String(mm).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
 const travelMin = (from, to, mode) => route(from, to, mode).length / SPEED[mode] / 60;
 
 // Pre-compute a drivable polyline offset into the right-hand lane.
-function lanePath(points, offset = 3) {
+// Riders keep to a lane: bikes and bicycles ride the curb-side bike lane, cars use the traffic lane.
+function laneOffset(a, b, mode) {
+  const vertical = Math.abs(b.x - a.x) < Math.abs(b.z - a.z);
+  const bike = mode !== 'Car';
+  if (vertical) {
+    const mx = (a.x + b.x) / 2;
+    const ave = AVENUES.reduce((best, v) => (Math.abs(v.x - mx) < Math.abs(best.x - mx) ? v : best));
+    if (bike) return ave.w / 2 - 2.2;
+    return ave.median ? ave.median / 2 + 4 : ave.oneWay ? 2 : ave.w / 4;
+  }
+  const n = Math.round(114 - (a.z + b.z) / 2 / BLOCK);
+  return bike ? streetWidth(n) / 2 - 2 : n === 110 ? 4 : 2;
+}
+function lanePath(points, mode) {
+  const n = points.length;
+  const seg = [];
+  for (let i = 1; i < n; i++) {
+    const a = points[i - 1], b = points[i];
+    const L = Math.hypot(b.x - a.x, b.z - a.z) || 1;
+    seg[i] = { nx: -(b.z - a.z) / L, nz: (b.x - a.x) / L, off: i === 1 || i === n - 1 ? 0 : laneOffset(a, b, mode) };
+  }
   return points.map((p, i) => {
-    if (i === 0 || i === points.length - 1) return p;
-    const a = points[i - 1], b = points[i + 1];
-    let nx = 0, nz = 0;
-    for (const [u, v] of [[a, p], [p, b]]) {
-      const dx = v.x - u.x, dz = v.z - u.z, L = Math.hypot(dx, dz) || 1;
-      nx += -dz / L;
-      nz += dx / L;
-    }
-    const L = Math.hypot(nx, nz) || 1;
-    return P(p.x + (nx / L) * offset, p.z + (nz / L) * offset);
+    if (i === 0 || i === n - 1) return p;
+    const s1 = seg[i], s2 = seg[i + 1];
+    if (Math.abs(s1.nx * s2.nx + s1.nz * s2.nz) < 0.5) return P(p.x + s1.nx * s1.off + s2.nx * s2.off, p.z + s1.nz * s1.off + s2.nz * s2.off);
+    const o = (s1.off + s2.off) / 2;
+    return P(p.x + ((s1.nx + s2.nx) / 2) * o, p.z + ((s1.nz + s2.nz) / 2) * o);
   });
 }
 
 const trips = new Map(); // riderId -> { points, len, s, purpose, order, target }
 function startTrip(dp, target, purpose, order = null) {
   const r = route(dp.position, target, dp.commuteType);
-  const points = lanePath(r.points);
+  const points = lanePath(r.points, dp.commuteType);
   let len = 0;
   for (let i = 1; i < points.length; i++) len += Math.hypot(points[i].x - points[i - 1].x, points[i].z - points[i - 1].z);
   trips.set(dp.id, { points, len, s: 0, purpose, order, target, steps: r.steps });
@@ -592,7 +612,7 @@ function renderPanel() {
 }
 
 // Live UI refresh — skipped while the pointer is over a panel so clicks are never lost.
-statusEl.innerHTML = `<div class="fd-speed" title="Simulation speed">${[10, 30, 60, 120].map((x) => `<button data-speed="${x}">×${x}</button>`).join('')}</div><div class="fd-status-body"></div>`;
+statusEl.innerHTML = `<div class="fd-speed" title="Simulation speed">${[1, 5, 10, 30].map((x) => `<button data-speed="${x}">×${x}</button>`).join('')}</div><div class="fd-status-body"></div>`;
 const statusBody = statusEl.querySelector('.fd-status-body');
 function render(force = false) {
   const html = statusHTML();
@@ -1135,12 +1155,12 @@ function arrive(dp, trip) {
   }
 }
 
-function stepRiders(dtSim) {
+function stepRiders(dtSim, factorOf = () => 1) {
   for (const dp of model.deliveryPartners) {
     const t = trips.get(dp.id);
     const obj = objects.get(dp.id);
     if (t) {
-      t.s = Math.min(t.len, t.s + SPEED[dp.commuteType] * dtSim);
+      t.s = Math.min(t.len, t.s + SPEED[dp.commuteType] * dtSim * factorOf(dp.id));
       let acc = 0;
       for (let i = 1; i < t.points.length; i++) {
         const a = t.points[i - 1], b = t.points[i];
@@ -1153,7 +1173,7 @@ function stepRiders(dtSim) {
         }
         acc += L;
       }
-      if (obj) obj.userData.wheels?.forEach((w) => (w.rotation.x += dtSim * 2));
+      if (obj) obj.userData.wheels?.forEach((w) => (w.rotation.x += dtSim * 2 * factorOf(dp.id)));
       if (t.s >= t.len) {
         trips.delete(dp.id);
         clearRoute(dp.id);
@@ -1313,7 +1333,26 @@ const distance = createDistancePanel(distEl, {
   onChange: onDistanceChange,
 });
 
+// ===========================================================================
+// 9. Proximity: boundaries, perception and "too close" rules for delivery partners
+// ===========================================================================
+const proximity = createProximity({
+  scene,
+  city,
+  riders: () => model.deliveryPartners,
+  objectOf: (id) => objects.get(id),
+  panelEl: root.querySelector('.fd-prox'),
+  onFollow: (id) => { const dp = byId(id); if (dp) { flyTo(dp.position, 55); follow = id; } },
+  customerDistance: (dp) => {
+    const o = model.orders.find((x) => x.active && x.deliveryPartner === dp.id && ['Picked Up', 'Out for Delivery'].includes(x.status));
+    if (!o) return null;
+    const a = anchorOf(byId(o.customer));
+    return Math.hypot(dp.position.x - a.x, dp.position.z - a.z);
+  },
+});
+
 function setLeftMode(mode) {
+  root.classList.toggle('fd-mode-proximity', mode === 'proximity');
   root.classList.toggle('fd-mode-distance', mode === 'distance');
   root.classList.toggle('fd-mode-locate', mode === 'locate');
   root.classList.toggle('fd-hide-loc', mode === 'none');
@@ -1321,6 +1360,7 @@ function setLeftMode(mode) {
   distGroup.visible = distanceMode;
   root.querySelector('[data-tool=distance]').classList.toggle('on', mode === 'distance');
   root.querySelector('[data-tool=locate]').classList.toggle('on', mode === 'locate');
+  root.querySelector('[data-tool=proximity]').classList.toggle('on', mode === 'proximity');
   if (distanceMode) distance.refresh(true);
 }
 
@@ -1333,7 +1373,7 @@ root.querySelector('.fd-toolbar').addEventListener('click', (ev) => {
     showRoutes = !showRoutes;
     ribbons.forEach((r) => (r.visible = showRoutes));
     b.classList.toggle('on', showRoutes);
-  } else if (a === 'locate' || a === 'distance') {
+  } else if (a === 'locate' || a === 'distance' || a === 'proximity') {
     setLeftMode(b.classList.contains('on') ? 'none' : a);
   } else if (a === 'reset') {
     resetAll();
@@ -1417,7 +1457,9 @@ function tick() {
   const dtSim = dt * timeScale; // simulated seconds this frame
   simMin += dtSim / 60;
   processOrders();
-  stepRiders(dtSim);
+  city.setObstacles(model.deliveryPartners.filter((d) => trips.has(d.id)).map((d) => d.position)); // parked riders sit at the kerb
+  proximity.update(dt, dtSim, trips);
+  stepRiders(dtSim, proximity.factor);
 
   // parcels follow their container
   for (const o of model.orders) {
@@ -1444,7 +1486,7 @@ function tick() {
   distGroup.children.forEach((c) => c.material?.map && c.isMesh && c.geometry.attributes.uv && (c.material.map.offset.x -= dt * 0.6));
   marker.material.opacity = 0.35 + 0.25 * Math.sin(t * 3);
 
-  if (follow) {
+  if (follow && !fly) {
     const l = locationOf(follow);
     if (l) {
       const target = new THREE.Vector3(l.x, 2, l.z);
@@ -1460,7 +1502,7 @@ function tick() {
     camera.position.lerpVectors(fly.fromP, fly.toP, e);
     if (fly.k >= 1) fly = null;
   }
-  city.update(dt, t, controls.target);
+  city.update(dt, t, controls.target, dtSim);
   uiTimer += dt;
   if (uiTimer > 0.4) {
     uiTimer = 0;
@@ -1491,7 +1533,8 @@ buildEntities();
 startIdleRuns();
 render();
 renderLocTab();
-setLeftMode('distance');
+setLeftMode('proximity');
+proximity.select('DP02');
 onDistanceChange(distance.routes());
 resize();
 tick();

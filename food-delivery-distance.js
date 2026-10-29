@@ -4,7 +4,7 @@
 import {
   AVENUES, STREETS, BLOCK, ZONES, EDGES, NODES, CLOSURES, LANDMARKS, HUDSON_X, PARKWAY_X,
   streetZ, route, separation, nearestEdge, edgeById,
-} from './food-delivery-location.js?v=6';
+} from './food-delivery-location.js?v=7';
 
 export const MODES = ['Walking', 'Bicycle', 'Bike', 'Car'];
 export const MODE_ICON = { Walking: '🚶', Bicycle: '🚲', Bike: '🛵', Car: '🚗', Scooter: '🛴' };
