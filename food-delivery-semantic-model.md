@@ -153,3 +153,21 @@ Each notion is computed live from the simulation, has a visual indicator in the 
 | **INTO / OUT OF** | The parcel's container changes (INTO the bag, OUT OF the bag INTO the customer's hands); a rider crosses a crowd circle | Pulse on the map + event log |
 | **PAST** | Along-heading coordinate of a restaurant, door or rider flips from ahead to behind, within 28 m laterally | Pulse + "DP01 went PAST Trattoria Roma" |
 | **AROUND** | Route length on the street network vs. the route with every street open: more than 20 m longer | Pink "↻ going AROUND (+300 m)" tag over the closure |
+
+## Spatial Agents
+
+One **main agent** (★ Kai, motorbike) is observed among a fleet of other courier agents (motorbikes, cars, e-bikes).
+
+| Assignment item | In the simulation |
+|---|---|
+| Limited knowledge at spawn | Each agent knows only the streets in its first glance. Unseen blocks are *assumed* open. |
+| Cone of vision | Motorbike 60 m · 60°, car 45 m · 90°, e-bike 35 m · 120°, blocked by buildings (line of sight along street corridors). |
+| Obstacles, hindrances, affordances | Discovers missing streets (✕), closures (⛔), one-way Amsterdam Ave, parking spots (P). |
+| Other agents as obstacles | Keeps a gap behind agents, cars and crossing people, and stops at red lights. Parks on the kerb ≥ 16 m from crossings, never blocking a door or another parked agent. |
+| Goals + performance criteria | Kai: deliver to Priya's home (goal), with Ana's delivery on the way, then back to the kitchen. Criterion: time vs. the ideal run. |
+| Multiple deliveries per run | It tests every pickup/drop order on its *own* map and takes the cheapest. No route is given to it. |
+| Landmarks | Restaurants 🍽️, churches ⛪, schools 🏫, parks 🌳, station 🚇. Positions are stated relative to them ("40 m S of ⛪ Cathedral"). |
+| Landmarks accelerate traversal | Known doors → no slow search; known parking spots → park straight away; familiar streets → faster. |
+| Visualise one agent's knowledge | 🧠 Map: green = known street, ✕ = no road, ⛔ = closure, yellow = one-way, P = parking. Known landmarks glow. |
+| Path history / learning | 〰 Paths: every run in a red → green gradient, plus a minutes-per-run chart against the ideal. |
+| Many agents, aggregate | ＋/− adds agents. 🔥 All: shared street-use heat and how many agents know each landmark. |

@@ -1,5 +1,5 @@
 ---
-title: Positioning + Movement — Food Delivery, Morningside Heights
+title: Spatial Agents — Food Delivery, Morningside Heights
 ---
 
 # Food Delivery — Morningside Heights
@@ -151,11 +151,28 @@ Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it,
 #fd3d .fd-toast { background: rgba(29,29,31,.92); color: #fff; padding: 7px 12px; border-radius: 8px; font-size: 12.5px; max-width: 460px; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
 #fd3d .fd-toast.warn { background: #b3261e; }
 #fd3d .fd-toast.ok { background: #06a35a; }
+#fd3d .fd-agents { padding: 6px 8px; }
+#fd3d .fd-ag-row { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; font-size: 12px; }
+#fd3d .fd-ag-row b { margin-right: 4px; }
+#fd3d .fd-ag-row span { min-width: 18px; text-align: center; font-weight: 700; }
+#fd3d .fd-ag-row button { padding: 4px 7px; }
+#fd3d .fd-ag-row button.on { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
+#fd3d .fd-ag-sub { font-size: 11px; color: #555; margin: 2px 2px 0; }
+#fd3d .fd-ag-goal { font-weight: 700; margin: 2px 0 6px; }
+#fd3d .fd-ag-stops { font-size: 11.5px; display: flex; flex-wrap: wrap; gap: 3px; align-items: center; color: #888; }
+#fd3d .fd-ag-stops i { font-style: normal; color: #bbb; }
+#fd3d .fd-ag-stops .done { color: #138a4b; } #fd3d .fd-ag-stops .now { color: #1d1d1f; font-weight: 700; }
+#fd3d .fd-ag-status { background: #111; color: #fff; border-radius: 8px; padding: 6px 9px; margin: 8px 0; font-weight: 600; }
+#fd3d .fd-ag-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 12px; }
+#fd3d .fd-ag-grid div { background: #f3f3f1; border-radius: 6px; padding: 4px 6px; }
+#fd3d .fd-ag-grid small { display: block; font-size: 9.5px; color: #777; text-transform: uppercase; letter-spacing: .04em; }
+#fd3d .fd-hint { display: none; }
 </style>
 <div id="fd3d">
   <div class="fd-canvas"></div>
   <div class="fd-left">
     <div class="fd-status fd-card"></div>
+    <div class="fd-agents fd-card"></div>
     <div class="fd-side fd-card">
       <div class="fd-sidetabs">
         <button data-side="position" class="on">POSITIONING</button>
@@ -204,7 +221,7 @@ Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it,
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
 </script>
-<script type="module" src="food-delivery-3d.js?v=8"></script>
+<script type="module" src="food-delivery-3d.js?v=9"></script>
 
 ## What you are looking at
 

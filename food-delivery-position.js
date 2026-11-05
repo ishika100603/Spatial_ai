@@ -14,7 +14,7 @@
 //   PAST                 a rider going past a landmark, restaurant or another rider
 //   AROUND               a rider de-routing around a road closure
 import * as THREE from 'three';
-import { textSprite } from './food-delivery-city.js?v=8';
+import { textSprite } from './food-delivery-city.js?v=9';
 
 export const ADJ = { reach: 4, clear: 0.9 }; // adjacent: ≤ 4 m apart and nothing within 0.9 m of the line between
 const CLUSTER = { link: 3.5, min: 3 };

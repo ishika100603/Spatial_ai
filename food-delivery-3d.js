@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
-import { createCity, textSprite } from './food-delivery-city.js?v=8';
+import { createCity, textSprite } from './food-delivery-city.js?v=9';
 import {
   AVENUES, STREETS, BLOCK, LANDMARKS, streetZ, streetShort, junction, route, describe, relativeTo,
   nearestLandmark, egocentric, toLatLon, parsePlace, nearestJunction, avenue, CLOSURES, NODES, edgeById, streetWidth,
-} from './food-delivery-location.js?v=8';
-import { createDistancePanel, PRESET_CLOSURES } from './food-delivery-distance.js?v=8';
-import { createProximity } from './food-delivery-proximity.js?v=8';
-import { createPosition } from './food-delivery-position.js?v=8';
+} from './food-delivery-location.js?v=9';
+import { createDistancePanel, PRESET_CLOSURES } from './food-delivery-distance.js?v=9';
+import { createProximity } from './food-delivery-proximity.js?v=9';
+import { createPosition } from './food-delivery-position.js?v=9';
+import { createAgents } from './food-delivery-agents.js?v=9';
 
 // ===========================================================================
 // 1. Semantic data — entities, attributes, relationships (no Three.js here)
@@ -273,7 +274,7 @@ function riderMesh(dp) {
       d.position.set(s * 0.94, 0.85, 0.3);
       inner.add(d);
     }
-    inner.scale.setScalar(1.25);
+    inner.scale.setScalar(1.8);
   } else {
     const bike = dp.commuteType === 'Bicycle';
     wheel(bike ? 0.36 : 0.32, -0.6);
@@ -290,7 +291,7 @@ function riderMesh(dp) {
     for (const s of [-1, 1]) inner.add(box(0.12, 0.6, 0.12, m(0x26303a), s * 0.12, 0.85, 0.05));
     bag.position.set(0, bike ? 1.45 : 1.15, bike ? 0.38 : 0.62);
     inner.add(bag);
-    inner.scale.setScalar(1.7);
+    inner.scale.setScalar(2.4);
   }
   g.userData.wheels = wheels;
   g.traverse((o) => o.isMesh && (o.castShadow = true));
@@ -335,7 +336,7 @@ function buildEntities() {
   for (const c of model.customers) addObject(c.id, doorway(c), `🏠 ${c.name} (${c.id})`, COLORS.Customer, 7);
   for (const dp of model.deliveryPartners) {
     const g = riderMesh(dp);
-    addObject(dp.id, g, `${dp.commuteType === 'Car' ? '🚗' : dp.commuteType === 'Bicycle' ? '🚲' : '🛵'} ${dp.id} ${dp.name}`, COLORS.DeliveryPartner, 5.5);
+    addObject(dp.id, g, `${dp.commuteType === 'Car' ? '🚗' : dp.commuteType === 'Bicycle' ? '🚲' : '🛵'} ${dp.id} ${dp.name}`, COLORS.DeliveryPartner, 7.5);
   }
   for (const o of model.orders) addParcel(o);
 }
@@ -364,6 +365,7 @@ function parcelPlace(o) {
 }
 
 function locationOf(id) {
+  if (agents?.has(id)) return agents.pos(id);
   const lm = LANDMARKS.find((l) => l.id === id);
   if (lm) return { x: lm.x, z: lm.z, what: lm.name };
   const e = byId(id);
@@ -561,6 +563,11 @@ const det = (key, title, body) => `<details data-key="${key}" ${openDetails.has(
 function renderPanel() {
   panel.style.display = selectedId ? '' : 'none';
   if (!selectedId) { panel.dataset.html = ''; return; }
+  if (agents?.has(selectedId)) {
+    const h = `<button class="fd-x" data-close title="Close">×</button>` + agents.panelHTML(selectedId);
+    if (panel.dataset.html !== h) { panel.innerHTML = h; panel.dataset.html = h; }
+    return;
+  }
   const e = byId(selectedId);
   const lm = LANDMARKS.find((l) => l.id === selectedId);
   if (lm) {
@@ -888,6 +895,15 @@ function setHighlights(list) {
 
 function select(id) {
   selectedId = id;
+  agents?.focus(id);
+  if (id && agents?.has(id)) {
+    setHighlights([]);
+    renderPanel();
+    const a = agents.pos(id), tgt = new THREE.Vector3(a.x, 0, a.z);
+    fly = { fromT: controls.target.clone(), toT: tgt, fromP: camera.position.clone(), toP: tgt.clone().add(new THREE.Vector3(60, 260, 150)), k: 0 };
+    follow = id; // keep the agent in view while it drives
+    return;
+  }
   if (!id) { setHighlights([]); renderPanel(); return; }
   const e = byId(id);
   const hl = [{ id, color: 0xffb400 }];
@@ -1230,7 +1246,7 @@ const JOBS = [
   { id: 'J2', pickup: 'R02', delivery: 'C03', rider: 'DP02' },
   { id: 'J3', pickup: 'R03', delivery: 'C02', rider: 'DP03' },
 ];
-const DEFAULT_CLOSURES = [PRESET_CLOSURES[0]];
+const DEFAULT_CLOSURES = [PRESET_CLOSURES[0], PRESET_CLOSURES[1]];
 const resetClosures = () => { CLOSURES.clear(); DEFAULT_CLOSURES.forEach((c) => CLOSURES.set(c.id, c.reason)); };
 resetClosures();
 
@@ -1479,6 +1495,7 @@ root.querySelector('.fd-toolbar').addEventListener('click', (ev) => {
 function resetAll() {
   [...ribbons.keys()].forEach(clearRoute);
   trips.clear();
+  agents.reset();
   model = initialModel();
   simMin = 12 * 60;
   orderCount = 1;
@@ -1510,6 +1527,8 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   const rect = renderer.domElement.getBoundingClientRect();
   pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
   raycaster.setFromCamera(pointer, camera);
+  const aid = agents.pick(raycaster);
+  if (aid) return select(aid);
   const hit = raycaster.intersectObjects(pickables, true)[0];
   if (hit) {
     let o = hit.object;
@@ -1545,7 +1564,8 @@ function tick() {
   const dtSim = dt * timeScale; // simulated seconds this frame
   simMin += dtSim / 60;
   processOrders();
-  city.setObstacles(model.deliveryPartners.filter((d) => trips.has(d.id)).map((d) => d.position)); // parked riders sit at the kerb
+  agents.update(dt, dtSim);
+  city.setObstacles([...model.deliveryPartners.filter((d) => trips.has(d.id)).map((d) => d.position), ...agents.moving()]); // parked riders sit at the kerb
   proximity.update(dt, dtSim, trips);
   stepRiders(dtSim, (id) => proximity.factor(id) * (position.inCrowd(id) ? 0.5 : 1)); // AMONG a crowd → half speed
   position.update(dt);
@@ -1623,6 +1643,8 @@ function tick() {
   requestAnimationFrame(tick);
 }
 
+var agents = createAgents({ scene, city, camera, riderMesh, lanePath, barEl: root.querySelector('.fd-agents'), onSelect: (id) => select(id) });
+root.classList.add('fd-collapsed');
 buildEntities();
 startIdleRuns();
 render();
