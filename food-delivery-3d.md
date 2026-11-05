@@ -10,16 +10,37 @@ Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it,
 <style>
 #fd3d { position: fixed; inset: 0; z-index: 9999; width: 100vw; height: 100vh; overflow: hidden; background: #cfe3f2; font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; color: #1d1d1f; }
 #fd3d .fd-canvas { position: absolute; inset: 0; }
-#fd3d .fd-canvas canvas { display: block; }
-#fd3d .fd-card { background: rgba(255,255,255,.95); border-radius: 12px; box-shadow: 0 4px 18px rgba(0,0,0,.14); backdrop-filter: blur(6px); }
-#fd3d .fd-left { position: absolute; left: 12px; top: 12px; bottom: 76px; width: 318px; display: flex; flex-direction: column; gap: 10px; z-index: 2; pointer-events: none; }
+#fd3d .fd-canvas canvas { display: block; touch-action: none; }
+#fd3d .fd-left { position: absolute; left: 12px; top: 12px; bottom: 70px; width: 340px; display: flex; flex-direction: column; gap: 8px; z-index: 2; pointer-events: none; }
 #fd3d .fd-left > * { pointer-events: auto; }
-#fd3d .fd-status { padding: 10px 12px; }
-#fd3d .fd-loc { padding: 10px 12px; overflow: auto; min-height: 0; flex: 1 1 auto; }
-#fd3d.fd-hide-loc .fd-loc, #fd3d .fd-dist, #fd3d .fd-prox { display: none; }
-#fd3d.fd-mode-proximity .fd-left { width: 400px; }
-#fd3d.fd-mode-proximity .fd-loc { display: none; }
-#fd3d.fd-mode-proximity .fd-prox { display: block; padding: 10px 12px; overflow: auto; min-height: 0; flex: 1 1 auto; }
+#fd3d .fd-status { display: flex; align-items: center; gap: 10px; padding: 7px 10px; flex-wrap: wrap; }
+#fd3d .fd-status-body { display: flex; gap: 10px; align-items: center; flex: 1; font-size: 12px; }
+#fd3d .fd-sline { color: #444; }
+#fd3d .fd-status .fd-clock { white-space: nowrap; font-size: 13px; }
+#fd3d .fd-side { display: flex; flex-direction: column; min-height: 0; flex: 0 1 auto; padding: 8px 10px 10px; }
+#fd3d .fd-sidetabs { display: flex; gap: 3px; margin-bottom: 8px; }
+#fd3d .fd-sidetabs button { flex: 1; margin: 0; padding: 6px 2px; font-size: 10px; letter-spacing: .02em; }
+#fd3d .fd-sidetabs button.on { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
+#fd3d .fd-sidetabs .fd-col { flex: 0 0 26px; }
+#fd3d .fd-sidebody { overflow: auto; min-height: 0; }
+#fd3d .fd-sidebody > div { display: none; }
+#fd3d.fd-mode-position .fd-pos, #fd3d.fd-mode-movement .fd-mov, #fd3d.fd-mode-proximity .fd-prox, #fd3d.fd-mode-distance .fd-dist, #fd3d.fd-mode-locate .fd-loc { display: block; }
+#fd3d.fd-collapsed .fd-sidebody { display: none; }
+#fd3d details { margin: 6px 0; border: 1px solid #e6e6e6; border-radius: 8px; padding: 0 8px; }
+#fd3d details[open] { padding-bottom: 6px; }
+#fd3d summary { cursor: pointer; font-weight: 700; font-size: 11.5px; padding: 6px 0; color: #333; }
+#fd3d .fd-x { position: sticky; top: 0; float: right; margin: -4px -6px 0 0; width: 26px; height: 26px; padding: 0; font-size: 16px; line-height: 1; border-radius: 50%; }
+#fd3d .fd-prep { display: inline-block; font: 800 10px system-ui; letter-spacing: .06em; color: #fff; background: var(--c); border-radius: 4px; padding: 2px 6px; margin-right: 2px; }
+#fd3d .fd-pgroup { border-left: 3px solid #eee; padding: 4px 0 4px 8px; margin: 6px 0; }
+#fd3d .fd-pgroup small { display: block; color: #666; font-size: 11px; margin: 2px 0; }
+#fd3d .fd-ev { font-size: 11.5px; padding: 2px 0; border-bottom: 1px dashed #eee; }
+#fd3d .fd-ev span { color: #888; font-variant-numeric: tabular-nums; }
+#fd3d .fd-nav { position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 4px; z-index: 3; padding: 5px; }
+#fd3d .fd-nav button { width: 34px; height: 34px; margin: 0; padding: 0; font-size: 15px; }
+#fd3d .fd-hint { position: absolute; left: 50%; bottom: 62px; transform: translateX(-50%); z-index: 2; font-size: 11px; color: #333; background: rgba(255,255,255,.8); border-radius: 10px; padding: 3px 10px; pointer-events: none; }
+@media (max-width: 900px) { #fd3d .fd-left { width: 280px; } #fd3d .fd-panel { width: 260px; } #fd3d .fd-hint { display: none; } }
+@media (max-width: 640px) { #fd3d .fd-left { width: auto; right: 58px; bottom: auto; max-height: 45%; } #fd3d .fd-panel { left: 12px; width: auto; top: auto; bottom: 70px; max-height: 38%; } }
+#fd3d .fd-card { background: rgba(255,255,255,.95); border-radius: 12px; box-shadow: 0 4px 18px rgba(0,0,0,.14); backdrop-filter: blur(6px); }
 #fd3d .fd-prox .fd-inline button { margin: 0; }
 #fd3d .fd-pbar { position: relative; display: flex; height: 26px; margin: 10px 0 4px; border-radius: 7px; overflow: visible; }
 #fd3d .fd-pbar-seg { flex: 1; display: grid; place-items: center; color: #fff; font: 800 10.5px system-ui; letter-spacing: .08em; }
@@ -44,9 +65,6 @@ Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it,
 #fd3d .fd-rule small { display: block; color: #777; font-size: 10.5px; margin-top: 1px; }
 #fd3d .fd-if, #fd3d .fd-then, #fd3d .fd-else { font: 800 10px system-ui; padding: 1px 4px; border-radius: 3px; color: #1d1d1f; }
 #fd3d .fd-if { background: #f2c94c; } #fd3d .fd-then { background: #6fcf97; } #fd3d .fd-else { background: #eb5757; color: #fff; }
-#fd3d.fd-mode-distance .fd-left { width: 440px; }
-#fd3d.fd-mode-distance .fd-loc { display: none; }
-#fd3d.fd-mode-distance .fd-dist { display: block; padding: 10px 12px; overflow: auto; min-height: 0; flex: 1 1 auto; }
 #fd3d .fd-plan-wrap { border-radius: 8px; overflow: hidden; border: 1px solid #ddd; }
 #fd3d .fd-plan { display: block; width: 100%; height: auto; aspect-ratio: 580 / 518; cursor: crosshair; }
 #fd3d .fd-plan text { font-family: system-ui, sans-serif; }
@@ -72,6 +90,8 @@ Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it,
 #fd3d .fd-job:hover { border-color: #999; background: #fafafa; }
 #fd3d .fd-job-head { display: flex; align-items: center; gap: 6px; }
 #fd3d .fd-swatch { width: 26px; height: 8px; border-radius: 4px; flex: none; }
+#fd3d .fd-jline { font-size: 12px; margin-top: 3px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+#fd3d .fd-jline select { width: auto; margin: 0 0 0 auto; padding: 2px 4px; font-size: 11px; }
 #fd3d .fd-job-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 6px 0 4px; }
 #fd3d .fd-job-grid div { background: #f3f3f1; border-radius: 6px; padding: 4px 6px; }
 #fd3d .fd-job-grid small { display: block; font-size: 9.5px; color: #777; text-transform: uppercase; letter-spacing: .04em; }
@@ -99,15 +119,14 @@ Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it,
 #fd3d .fd-time { background: #fff4d6; border-radius: 6px; padding: 4px 8px; margin: 6px 0; }
 #fd3d .fd-step { font-size: 12px; color: #333; padding: 1px 0 1px 10px; border-left: 2px solid #2f80ed; margin: 2px 0; }
 #fd3d .fd-clock { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 15px; }
-#fd3d .fd-speed { position: absolute; right: 10px; top: 9px; }
-#fd3d .fd-status { position: relative; }
+#fd3d .fd-speed { display: inline-flex; }
 #fd3d .fd-speed button { padding: 2px 6px; font-size: 10px; margin: 0 0 0 2px; }
 #fd3d .fd-speed button.on { background: #1d1d1f; color: #fff; }
 #fd3d .fd-toolbar { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 7px; z-index: 3; max-width: calc(100vw - 24px); }
 #fd3d button { font: 600 11px system-ui, sans-serif; letter-spacing: .03em; border: 1px solid #ccc; background: #fff; color: #1d1d1f; border-radius: 8px; padding: 6px 9px; cursor: pointer; margin: 2px; }
 #fd3d button:hover { background: #f1f1f1; }
 #fd3d .fd-toolbar button.on { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
-#fd3d .fd-panel { position: absolute; right: 12px; top: 12px; width: 320px; max-height: calc(100% - 100px); overflow: auto; padding: 12px 14px; z-index: 2; }
+#fd3d .fd-panel { position: absolute; right: 12px; top: 12px; width: 300px; max-height: calc(100% - 90px); overflow: auto; padding: 12px 14px; z-index: 2; }
 #fd3d h3 { margin: 6px 0 8px; font-size: 16px; border: 0; padding: 0; }
 #fd3d h4 { margin: 12px 0 4px; font-size: 10.5px; letter-spacing: .08em; color: #777; border: 0; padding: 0; }
 #fd3d .fd-type { display: inline-block; color: #fff; font: 700 10px system-ui; letter-spacing: .1em; padding: 3px 8px; border-radius: 5px; }
@@ -131,47 +150,60 @@ Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it,
 #fd3d .fd-toast { background: rgba(29,29,31,.92); color: #fff; padding: 7px 12px; border-radius: 8px; font-size: 12.5px; max-width: 460px; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
 #fd3d .fd-toast.warn { background: #b3261e; }
 #fd3d .fd-toast.ok { background: #06a35a; }
-#fd3d .fd-compass { position: absolute; right: 344px; bottom: 16px; z-index: 2; background: rgba(255,255,255,.9); border-radius: 50%; width: 46px; height: 46px; display: grid; place-items: center; font-weight: 800; font-size: 11px; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
-@media (max-width: 900px) { #fd3d .fd-left { width: 260px; } #fd3d .fd-panel { width: 260px; } #fd3d .fd-compass { display: none; } }
-@media (max-width: 640px) { #fd3d .fd-loc { display: none; } #fd3d .fd-panel { left: 12px; width: auto; top: auto; bottom: 80px; max-height: 38%; } #fd3d .fd-left { width: auto; right: 12px; bottom: auto; } }
 </style>
 <div id="fd3d">
   <div class="fd-canvas"></div>
   <div class="fd-left">
     <div class="fd-status fd-card"></div>
-    <div class="fd-loc fd-card">
-      <div class="fd-tabs">
-        <button data-tab="where" class="on">1 · Where is it?</button>
-        <button data-tab="here">2 · What is here?</button>
-        <button data-tab="frame">3 · Frame of reference</button>
-        <button data-tab="describe">4 · Describe a place</button>
+    <div class="fd-side fd-card">
+      <div class="fd-sidetabs">
+        <button data-side="position" class="on">POSITION</button>
+        <button data-side="movement">MOVEMENT</button>
+        <button data-side="proximity">PROXIMITY</button>
+        <button data-side="distance">DISTANCE</button>
+        <button data-side="locate">LOCATE</button>
+        <button class="fd-col" data-collapse title="Collapse / expand">▾</button>
       </div>
-      <div class="fd-tabbody"></div>
+      <div class="fd-sidebody">
+        <div class="fd-pos"></div>
+        <div class="fd-mov"></div>
+        <div class="fd-prox"></div>
+        <div class="fd-dist"></div>
+        <div class="fd-loc">
+          <div class="fd-tabs">
+            <button data-tab="where" class="on">1 · Where is it?</button>
+            <button data-tab="here">2 · What is here?</button>
+            <button data-tab="frame">3 · Frame of reference</button>
+            <button data-tab="describe">4 · Describe a place</button>
+          </div>
+          <div class="fd-tabbody"></div>
+        </div>
+      </div>
     </div>
-    <div class="fd-dist fd-card"></div>
-    <div class="fd-prox fd-card"></div>
   </div>
-  <div class="fd-panel fd-card"></div>
+  <div class="fd-panel fd-card" style="display:none"></div>
   <div class="fd-toasts"></div>
-  <div class="fd-compass" title="Manhattan grid north (uptown)">N ↑</div>
+  <div class="fd-hint">Drag to pan · right-drag to rotate · scroll to zoom · click anything to inspect</div>
+  <div class="fd-nav fd-card">
+    <button data-nav="in" title="Zoom in">＋</button>
+    <button data-nav="out" title="Zoom out">－</button>
+    <button data-nav="left" title="Rotate left">⟲</button>
+    <button data-nav="right" title="Rotate right">⟳</button>
+    <button data-nav="top" title="Top view">⊤</button>
+    <button data-nav="home" title="Whole site">⌂</button>
+  </div>
   <div class="fd-toolbar fd-card">
     <button data-tool="track">▶ TRACK DELIVERY</button>
-    <button data-tool="receiveOrder">RECEIVE ORDER</button>
-    <button data-tool="pay">RECEIVE PAYMENT</button>
-    <button data-tool="proximity" class="on">PROXIMITY</button>
-    <button data-tool="distance">DISTANCE</button>
-    <button data-tool="locate">LOCATE</button>
-    <button data-tool="assist">ASSISTANCE</button>
-    <button data-tool="profile">PROFILE</button>
-    <button data-tool="routes" class="on">ROUTES</button>
-    <button data-tool="home">OVERVIEW</button>
-    <button data-tool="reset">RESET</button>
+    <button data-tool="receiveOrder">＋ NEW ORDER</button>
+    <button data-tool="assist">💬 ASSISTANT</button>
+    <button data-tool="home">⌂ OVERVIEW</button>
+    <button data-tool="reset">↺ RESET</button>
   </div>
 </div>
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
 </script>
-<script type="module" src="food-delivery-3d.js?v=7"></script>
+<script type="module" src="food-delivery-3d.js?v=8"></script>
 
 ## What you are looking at
 

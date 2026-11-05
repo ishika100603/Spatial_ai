@@ -3,7 +3,7 @@
 // St. John the Divine, Riverside and Morningside Parks, the Hudson, traffic and people.
 // Decorative except for the street grid, which comes from the location model.
 import * as THREE from 'three';
-import { AVENUES, BLOCK, streetZ, streetWidth, streetShort, streetSegmentKind, zoneAt, HUDSON_X, PARKWAY_X } from './food-delivery-location.js?v=7';
+import { AVENUES, BLOCK, streetZ, streetWidth, streetShort, streetSegmentKind, zoneAt, HUDSON_X, PARKWAY_X } from './food-delivery-location.js?v=8';
 
 // What is drawn: the site (W 111th–116th, Broadway–Morningside Dr) plus about one block of context.
 const VIS = { x0: -270, x1: 400, z0: streetZ(117.6), z1: streetZ(110) + 16 };
@@ -105,7 +105,7 @@ function canvasTex(w, h, draw, repeat = true) {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.anisotropy = 8;
+  t.anisotropy = 4;
   return t;
 }
 
@@ -244,7 +244,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
   scene.fog = new THREE.Fog(0xcfe3f2, 600, 2200);
   sun.color.set(0xfff0dc);
   sun.intensity = 2.8;
-  sun.shadow.mapSize.set(4096, 4096);
+  sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, { left: -320, right: 320, top: 320, bottom: -320, near: 10, far: 1600 });
   sun.shadow.camera.updateProjectionMatrix();
   sun.shadow.bias = -0.0004;
@@ -257,7 +257,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
   // Clouds
   const cloudMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.55, roughness: 1, flatShading: true, transparent: true, opacity: 0.95, fog: false });
   const clouds = [];
-  for (let i = 0; i < 26; i++) {
+  for (let i = 0; i < 8; i++) {
     const c = new THREE.Group();
     for (let p = 0; p < 6; p++) {
       const m = new THREE.Mesh(new THREE.IcosahedronGeometry(between(40, 90), 1), cloudMat);
@@ -475,10 +475,10 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
           const x0 = a.x + a.w / 2 + 12, x1 = east.x - east.w / 2 - 12;
           for (const side of [-1, 1]) {
             const zc = sz + side * (sw / 2 + 2);
-            for (let x = x0; x < x1; x += 11) if (rand() < 0.8) trees(x + between(-1, 1), zc, between(0.85, 1.15));
+            for (let x = x0; x < x1; x += 16) if (rand() < 0.8) trees(x + between(-1, 1), zc, between(0.85, 1.15));
             const zp = sz + side * (sw / 2 - 1.3);
             for (let x = x0 + 3; x < x1 - 3; x += 6.3) {
-              if (rand() < 0.62) {
+              if (rand() < 0.35) {
                 const col = rand() < 0.12 ? 0xf2c218 : pick(CAR_COLORS);
                 parkedBodyI.add(x, 0.75, zp, 1, 1, 1, Math.PI / 2, col);
                 parkedCabinI.add(x - 0.2, 1.45, zp, 1, 1, 1, Math.PI / 2);
@@ -572,19 +572,6 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
     const base = new THREE.Mesh(new THREE.BoxGeometry(w + 0.4, 3, d + 0.4), stoneMat);
     base.position.set(cx, 2.1, cz);
     scene.add(base);
-    // window rows
-    const winMat = mat(0x2c3640, { roughness: 0.3, metalness: 0.4 });
-    const floors = Math.floor((h - 4) / 4);
-    for (let f = 0; f < floors; f++) {
-      for (const side of [-1, 1]) {
-        const strip = new THREE.Mesh(new THREE.BoxGeometry(w * 0.86, 1.6, 0.2), winMat);
-        strip.position.set(cx, 0.6 + 4.5 + f * 4, cz + side * (d / 2 + 0.05));
-        scene.add(strip);
-        const strip2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.6, d * 0.86), winMat);
-        strip2.position.set(cx + side * (w / 2 + 0.05), 0.6 + 4.5 + f * 4, cz);
-        scene.add(strip2);
-      }
-    }
     if (roof === 'hip') {
       const r = new THREE.Mesh(new THREE.ConeGeometry(Math.SQRT1_2, 1, 4, 1), roofMat);
       r.rotation.y = Math.PI / 4;
@@ -1040,7 +1027,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
   const shuffle = (arr) => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
   shuffle(carPool);
   shuffle(scooterPool);
-  const population = { cars: Math.round(carPool.length / 2), scooters: Math.round(scooterPool.length * 0.35), people: 260 };
+  const population = { cars: Math.round(carPool.length / 2), scooters: Math.round(scooterPool.length * 0.35), people: 160 };
   function applyVehiclePopulation() {
     carPool.forEach((m, i) => activate(m, i < population.cars));
     scooterPool.forEach((m, i) => activate(m, i < population.scooters));
@@ -1209,7 +1196,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
     return !!other && streetKind(n, side < 0 ? other : a, side < 0 ? a : other) === 'road';
   };
   const jAt = (aveId, n) => junctions.find((j) => j.ave === aveId && j.n === n);
-  for (let i = 0; i < 600; i++) {
+  for (let i = 0; i < 400; i++) {
     const r = rand();
     let p;
     if (r < 0.1) {
@@ -1395,7 +1382,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
 
   // ----- Animals: gulls over the Hudson, pigeons on College Walk, ducks on the pond -----
   const gullMat = mat(0xf4f4f4);
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 5; i++) {
     const g = new THREE.Group();
     const body = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.4, 5), gullMat);
     body.rotation.x = Math.PI / 2;
@@ -1409,7 +1396,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
       return [p, s];
     });
     scene.add(g);
-    const c = i < 7 ? { x: 330, z: streetZ(113), r: 70 } : { x: -16, z: -100, r: 110 };
+    const c = i < 3 ? { x: 330, z: streetZ(113), r: 70 } : { x: -16, z: -100, r: 110 };
     const r = c.r + between(-25, 25), h = between(30, 60), sp = between(0.08, 0.16), ph = rand() * 6;
     updaters.push((dt, t) => {
       const a = t * sp + ph;
@@ -1418,18 +1405,7 @@ export function createCity({ scene, renderer, camera, sun, hemi }) {
       wings.forEach(([p, s]) => (p.rotation.z = s * Math.sin(t * 7 + ph) * 0.6));
     });
   }
-  const pigeons = new THREE.InstancedMesh(new THREE.SphereGeometry(0.18, 8, 6), mat(0x7d8088), 40);
-  const pig = Array.from({ length: 40 }, () => ({ x: between(-60, 30), z: streetZ(116) + between(-5, 5), ph: rand() * 6 }));
-  scene.add(pigeons);
-  updaters.push((dt, t) => {
-    pig.forEach((p, i) => {
-      p.x += Math.sin(t * 0.5 + p.ph) * dt * 0.4;
-      m4.makeTranslation(p.x, 0.8 + Math.max(0, Math.sin(t * 3 + p.ph)) * 0.06, p.z);
-      pigeons.setMatrixAt(i, m4);
-    });
-    pigeons.instanceMatrix.needsUpdate = true;
-  });
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 3; i++) {
     const d = new THREE.Group();
     const b = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), mat(i % 2 ? 0x8a7a66 : 0x6b5a44));
     b.scale.set(0.8, 0.6, 1.2);

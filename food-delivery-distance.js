@@ -4,7 +4,7 @@
 import {
   AVENUES, STREETS, BLOCK, ZONES, EDGES, NODES, CLOSURES, LANDMARKS, SITE,
   streetZ, route, separation, nearestEdge, edgeById,
-} from './food-delivery-location.js?v=7';
+} from './food-delivery-location.js?v=8';
 
 export const MODES = ['Walking', 'Bicycle', 'Bike', 'Car'];
 export const MODE_ICON = { Walking: '🚶', Bicycle: '🚲', Bike: '🛵', Car: '🚗', Scooter: '🛴' };
@@ -52,9 +52,7 @@ export function createDistancePanel(el, ctx) {
     <div class="fd-legend"></div>
     <div class="fd-key"><span><i class="fd-k-p">P</i> pickup</span><span><i class="fd-k-d">D</i> delivery</span><span><i class="fd-k-x">✕</i> road closed</span><span><i class="fd-k-o"></i> fastest if open</span></div>
     <div class="fd-metrics"></div>
-    <h4>ROAD CLOSURES</h4>
-    <div class="fd-note">Toggle a closure, or click any street segment on the plan to close / reopen it.</div>
-    <div class="fd-closures"></div>`;
+    <details><summary>⛔ Road closures (or click a street on the plan)</summary><div class="fd-closures"></div></details>`;
   const svg = el.querySelector('svg');
   const metricsEl = el.querySelector('.fd-metrics');
   const closuresEl = el.querySelector('.fd-closures');
@@ -199,19 +197,12 @@ export function createDistancePanel(el, ctx) {
         ? `<div class="fd-detour">⛔ No way round by road inside the site — the rider walks the ${r.mode === 'Car' ? 'last block on foot' : 'bike'} through ${r.closedOnIdeal.map((id) => esc(edgeById(id).label)).join(', ')}: <b>+${Math.max(1, Math.round(r.walkPenalty))} min</b></div>`
         : r.detour > 1
         ? `<div class="fd-detour">⛔ De-routed around ${r.closedOnIdeal.map((id) => esc(edgeById(id).label)).join(', ') || 'a closure'}: <b>+${fmtM(r.detour)}</b> · <b>+${Math.max(1, Math.round(r.detour / ctx.SPEED[r.mode] / 60))} min</b></div>`
-        : r.closedOnIdeal.length ? `<div class="fd-note">A closure sits on the usual route but an equally short street is open — no extra distance.</div>` : '<div class="fd-ok">✓ Fastest route is open</div>';
+        : '';
+      const cmp = MODES.map((m) => `${m} ${Math.round(r.byMode[m])} min`).join(' · ');
       return `<div class="fd-job" data-job="${r.job.id}">
         <div class="fd-job-head"><span class="fd-swatch" style="background:${r.color}"></span><b>P${r.i + 1} ${esc(p.name)} → D${r.i + 1} ${esc(d.name)}</b></div>
-        <div class="fd-job-grid">
-          <div><small>Streets away</small><b>${half(r.sep.streets)}</b></div>
-          <div><small>Avenues away</small><b>${r.sep.avenues}</b></div>
-          <div><small>Distance</small><b>${fmtM(r.actual.length)}</b></div>
-          <div><small>Time</small><b>${Math.round(r.total)} min</b></div>
-        </div>
-        <div class="fd-loc-sub">${r.sep.avenues ? `crosses ${esc(r.sep.avenueNames.join(', '))} · ` : ''}${fmtM(r.sep.straight)} as the crow flies · route is ${(r.actual.length / Math.max(1, r.sep.straight)).toFixed(2)}× longer</div>
-        <div class="fd-mode-row"><select data-mode="${r.job.id}">${options}</select>
-          <span class="fd-modes">${MODES.map((m) => `<span class="${m === r.mode ? 'on' : ''}" title="${m}">${MODE_ICON[m]} ${Math.round(r.byMode[m])}′</span>`).join('')}</span></div>
-        <div class="fd-loc-sub">${Math.round(r.rideMin)} min ride + ${ctx.HANDOFF[r.mode]} min hand-off by ${r.mode.toLowerCase()} · fastest mode here: ${MODE_ICON[fastest]} ${fastest}</div>
+        <div class="fd-jline" title="By mode: ${cmp} · fastest: ${fastest}"><b>${half(r.sep.streets)}</b> streets · <b>${r.sep.avenues}</b> avenue${r.sep.avenues === 1 ? '' : 's'} · <b>${fmtM(r.actual.length)}</b> · <b>${Math.round(r.total)} min</b>
+          <select data-mode="${r.job.id}">${options}</select></div>
         ${closure}
       </div>`;
     }).join('');

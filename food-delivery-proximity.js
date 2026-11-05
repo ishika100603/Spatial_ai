@@ -223,10 +223,11 @@ export function createProximity({ scene, city, riders, objectOf, panelEl, onFoll
   // --- Panel ------------------------------------------------------------------
   panelEl.innerHTML = `<div class="fd-q-title">Proximity · how close is too close?</div>
     <div class="fd-inline"><select class="fd-prox-agent"></select><button class="fd-prox-follow">Follow</button></div>
-    <h4>STREET POPULATION (live simulation)</h4>
-    <div class="fd-pop"></div>
-    <label class="fd-closure"><input type="checkbox" class="fd-prox-all" checked /> Show boundaries for every agent (vehicles, pedestrians, riders)</label>
-    <div class="fd-prox-live"></div>`;
+    <div class="fd-prox-live"></div>
+    <details><summary>👁 What it perceives</summary><div class="fd-prox-perc"></div></details>
+    <details><summary>📏 Proximity rules (IF · THEN · ELSE)</summary><div class="fd-prox-rules"></div></details>
+    <details><summary>🚦 Street population & traffic</summary><div class="fd-pop"></div>
+      <label class="fd-closure"><input type="checkbox" class="fd-prox-all" checked /> Show boundaries around every agent</label><div class="fd-prox-sim"></div></details>`;
   const popEl = panelEl.querySelector('.fd-pop');
   const pop = city.population();
   popEl.innerHTML = [['cars', '🚗 Cars, taxis & buses'], ['scooters', '🛵 Scooters & bikes'], ['people', '🚶 Pedestrians']].map(([k, label]) =>
@@ -256,7 +257,7 @@ export function createProximity({ scene, city, riders, objectOf, panelEl, onFoll
   let last = 0;
   function renderPanel(force = false) {
     const now = performance.now();
-    if (!force && (now - last < 300 || live.matches(':hover'))) return;
+    if (!force && (now - last < 300 || panelEl.matches(':hover'))) return;
     last = now;
     const dp = riders().find((d) => d.id === selected);
     const st = state.get(selected);
@@ -270,7 +271,7 @@ export function createProximity({ scene, city, riders, objectOf, panelEl, onFoll
     const stats = city.stats();
     const levels = { clear: 0, low: 0, medium: 0, extreme: 0 };
     for (const s of state.values()) levels[s.level]++;
-    live.innerHTML = `
+    const full = `
       <div class="fd-pbar"><div class="fd-pbar-seg low">LOW</div><div class="fd-pbar-seg medium">MEDIUM</div><div class="fd-pbar-seg extreme">EXTREME</div><i style="left:${(st.intensity * 100).toFixed(1)}%"></i></div>
       <div class="fd-plevel" style="color:${LEVEL_COLOR[st.level]}">${st.level.toUpperCase()} proximity${st.nearest ? ` · nearest: ${st.nearest.type}, ${st.nearest.d.toFixed(1)} m` : ''}</div>
       <div class="fd-paction">${st.action}</div>
@@ -301,6 +302,14 @@ export function createProximity({ scene, city, riders, objectOf, panelEl, onFoll
         <div>🚦 Signals</div><b>${stats.signals}</b><span>70 s cycle, green wave uptown</span>
         <div>🛵 Riders</div><b>${riders().length}</b><span>${levels.extreme} extreme · ${levels.medium} medium · ${levels.low} low · ${levels.clear} clear</span>
       </div>`;
+    const [head, rest1 = ''] = full.split(/<h4>WHAT[^<]*<\/h4>/);
+    const [perc, rest2 = ''] = rest1.split(/<h4>RULES[^<]*<\/h4>/);
+    const [rules, sim = ''] = rest2.split('<h4>WHOLE SIMULATION</h4>');
+    const set = (sel, html) => { const el = panelEl.querySelector(sel); if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; } };
+    set('.fd-prox-live', head);
+    set('.fd-prox-perc', perc);
+    set('.fd-prox-rules', rules);
+    set('.fd-prox-sim', sim);
   }
 
   return {

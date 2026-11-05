@@ -1,12 +1,13 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createCity, textSprite } from './food-delivery-city.js?v=7';
+import { MapControls } from 'three/addons/controls/MapControls.js';
+import { createCity, textSprite } from './food-delivery-city.js?v=8';
 import {
   AVENUES, STREETS, BLOCK, LANDMARKS, streetZ, streetShort, junction, route, describe, relativeTo,
   nearestLandmark, egocentric, toLatLon, parsePlace, nearestJunction, avenue, CLOSURES, NODES, edgeById, streetWidth,
-} from './food-delivery-location.js?v=7';
-import { createDistancePanel, PRESET_CLOSURES } from './food-delivery-distance.js?v=7';
-import { createProximity } from './food-delivery-proximity.js?v=7';
+} from './food-delivery-location.js?v=8';
+import { createDistancePanel, PRESET_CLOSURES } from './food-delivery-distance.js?v=8';
+import { createProximity } from './food-delivery-proximity.js?v=8';
+import { createPosition } from './food-delivery-position.js?v=8';
 
 // ===========================================================================
 // 1. Semantic data — entities, attributes, relationships (no Three.js here)
@@ -98,7 +99,7 @@ function validateOrder(order) {
 const root = document.getElementById('fd3d');
 const canvasHost = root.querySelector('.fd-canvas');
 const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 canvasHost.appendChild(renderer.domElement);
@@ -107,12 +108,21 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(42, 1, 1, 12000);
 const HOME = { pos: new THREE.Vector3(290, 300, 460), target: new THREE.Vector3(40, 0, 40) };
 camera.position.copy(HOME.pos);
-const controls = new OrbitControls(camera, renderer.domElement);
+// Map-style navigation: drag = pan, right-drag (or two fingers) = rotate, scroll = zoom toward the cursor.
+const controls = new MapControls(camera, renderer.domElement);
 controls.target.copy(HOME.target);
 controls.enableDamping = true;
-controls.maxPolarAngle = Math.PI / 2.08;
-controls.minDistance = 12;
-controls.maxDistance = 1300;
+controls.dampingFactor = 0.12;
+controls.screenSpacePanning = false;
+controls.zoomToCursor = true;
+controls.zoomSpeed = 1.3;
+controls.panSpeed = 1.1;
+controls.rotateSpeed = 0.5;
+controls.maxPolarAngle = 1.32;
+controls.minDistance = 15;
+controls.maxDistance = 900;
+controls.listenToKeyEvents(window); // arrow keys pan
+const BOUNDS = { x0: -290, x1: 420, z0: -330, z1: 370 }; // keep the view on the site
 const hemi = new THREE.HemisphereLight(0xffffff, 0x888888, 1.2);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffffff, 2.5);
@@ -429,14 +439,31 @@ function lanePath(points, mode) {
 }
 
 const trips = new Map(); // riderId -> { points, len, s, purpose, order, target }
-function startTrip(dp, target, purpose, order = null) {
+let position = null; // position + movement indicators (created below)
+function startTrip(dp, target, purpose, order = null, targetId = null) {
   const r = route(dp.position, target, dp.commuteType);
   const points = lanePath(r.points, dp.commuteType);
   let len = 0;
   for (let i = 1; i < points.length; i++) len += Math.hypot(points[i].x - points[i - 1].x, points[i].z - points[i - 1].z);
-  trips.set(dp.id, { points, len, s: 0, purpose, order, target, steps: r.steps });
+  // AROUND: is this route longer than the ideal one because of a closure?
+  const ideal = route(dp.position, target, dp.commuteType, { ignoreClosures: true });
+  let around = null;
+  if (r.length > ideal.length + 20) {
+    const closures = [...CLOSURES.keys()].map((id) => edgeById(id)).filter(Boolean).map((e) => {
+      const A = NODES.get(e.a), B = NODES.get(e.b);
+      return { id: e.id, x: (A.x + B.x) / 2, z: (A.z + B.z) / 2 };
+    }).filter((c) => ideal.points.some((p, i) => i > 0 && segDist(c, ideal.points[i - 1], p) < 6));
+    around = { extra: r.length - ideal.length, closures };
+    position?.event('around', `${dp.id} is going AROUND a closure (+${Math.round(around.extra)} m)`, closures[0]?.x, closures[0]?.z);
+  }
+  trips.set(dp.id, { points, len, s: 0, purpose, order, target, targetId, steps: r.steps, around });
   drawRoute(dp.id);
   return r;
+}
+function segDist(p, a, b) {
+  const dx = b.x - a.x, dz = b.z - a.z;
+  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.z - a.z) * dz) / (dx * dx + dz * dz || 1)));
+  return Math.hypot(p.x - (a.x + dx * t), p.z - (a.z + dz * t));
 }
 function tripRemainingMin(dp) {
   const t = trips.get(dp.id);
@@ -502,13 +529,9 @@ function locationBlock(id) {
   const loc = locationOf(id);
   if (!loc) return '';
   const d = describe(loc.x, loc.z);
-  const lm = nearestLandmark(loc.x, loc.z);
-  return `<h4>LOCATION</h4>
-    ${loc.container ? `<div class="fd-loc-line">📦 ${esc(loc.container)}</div>` : ''}
-    <div class="fd-loc-line">📍 ${esc(d.text)}</div>
-    <div class="fd-loc-sub">Nearest junction: <b>${esc(d.junction.name)}</b> · ${Math.round(d.junction.d)} m</div>
-    <div class="fd-loc-sub">${esc(relativeTo(lm, loc.x, loc.z))}</div>
-    <div class="fd-loc-sub">${esc(d.latlon)}</div>`;
+  return `<div class="fd-loc-line">📍 ${loc.container ? `${esc(loc.container)} · ` : ''}${esc(d.text)}</div>
+    ${det(`loc-${id}`, 'More about this location', `<div class="fd-loc-sub">Nearest junction: <b>${esc(d.junction.name)}</b> · ${Math.round(d.junction.d)} m</div>
+    <div class="fd-loc-sub">${esc(relativeTo(nearestLandmark(loc.x, loc.z), loc.x, loc.z))}</div><div class="fd-loc-sub">${esc(d.latlon)}</div>`)}`;
 }
 
 function confidentialityBlock(viewer) {
@@ -520,33 +543,29 @@ function confidentialityBlock(viewer) {
       ${Object.entries(v.visible).map(([k, val]) => `<div class="fd-ok">✓ ${FIELD_NAMES[k]}: ${esc(val)}</div>`).join('')}
       ${v.hidden.slice(0, 4).map((k) => `<div class="fd-locked">🔒 ${FIELD_NAMES[k]}</div>`).join('')}`;
   }).join('');
-  return `<h4>RULE · CUSTOMER CONFIDENTIALITY</h4>${lines || '<div class="fd-note">No customer data is shared with this entity until it is linked to an order.</div>'}`;
+  return det(`conf-${viewer.id}`, '🔒 What customer data it can see', lines || '<div class="fd-note">Nothing until it is linked to an order.</div>');
 }
 
 function statusHTML() {
-  const active = model.orders.filter((o) => o.active).length;
-  const avg = model.stats.delivered ? Math.round(model.stats.totalMinutes / model.stats.delivered) : 0;
   const o = model.orders[0];
   const est = estimate(o);
-  return `<div class="fd-clock">🕛 ${clockText(simMin)}</div>
-    <h4>DELIVERY NETWORK · MORNINGSIDE HEIGHTS</h4>
-    ${row('Restaurants', model.restaurants.length)}${row('Delivery partners', model.deliveryPartners.length)}
-    ${row('Active orders', active)}${row('Delivered today', model.stats.delivered)}${row('Average delivery', avg + ' min')}
-    <div class="fd-eta"><span>O01 · ${esc(o.status)}<small>${etaParts(o, est)}</small></span><b>${o.status === 'Delivered' ? '✓' : min(est.total)}</b></div>`;
+  return `<span class="fd-clock">🕛 ${clockText(simMin)}</span>
+    <span class="fd-sline"><b>O01</b> ${esc(o.status)} · ${o.status === 'Delivered' ? '✓ delivered' : `ETA <b>${min(est.total)}</b>`}</span>`;
 }
 
+// Collapsible sections that stay open across live re-renders.
+const openDetails = new Set();
+document.addEventListener('toggle', (e) => { const k = e.target.dataset?.key; if (k) (e.target.open ? openDetails.add(k) : openDetails.delete(k)); }, true);
+const det = (key, title, body) => `<details data-key="${key}" ${openDetails.has(key) ? 'open' : ''}><summary>${title}</summary>${body}</details>`;
+
 function renderPanel() {
-  if (!selectedId) {
-    panel.innerHTML = `<h3>Food Delivery · Morningside Heights</h3>
-      <div class="fd-note">A semantic model of food delivery placed on the real street grid around Columbia University. Click a rider, restaurant, doorway or parcel — or anywhere on the map to ask <i>what is here?</i></div>
-      <div class="fd-note">The relations show themselves: riders <b>drive to</b> restaurants along real streets, and every partner storefront carries a green <b>Uber Eats</b> sticker (<i>partners with</i>).</div>`;
-    return;
-  }
+  panel.style.display = selectedId ? '' : 'none';
+  if (!selectedId) { panel.dataset.html = ''; return; }
   const e = byId(selectedId);
   const lm = LANDMARKS.find((l) => l.id === selectedId);
   if (lm) {
     const occ = occupantsAt(lm.x, lm.z, 60);
-    panel.innerHTML = `<div class="fd-type" style="background:#555">PLACE</div><h3>${esc(lm.name)}</h3>${locationBlock(lm.id)}
+    panel.innerHTML = `<button class="fd-x" data-close title="Close">×</button><div class="fd-type" style="background:#555">PLACE</div><h3>${esc(lm.name)}</h3>${locationBlock(lm.id)}
       <h4>OCCUPIED BY</h4>${occ.list.filter((x) => !x.landmark).map((x) => `<div class="fd-rel">${link(x.id)} · ${Math.round(x.d)} m</div>`).join('') || '<div class="fd-note">No delivery entities here right now.</div>'}`;
     return;
   }
@@ -557,18 +576,17 @@ function renderPanel() {
     const current = model.orders.find((o) => o.deliveryPartner === e.id && o.active);
     const trip = trips.get(e.id);
     html = `<div class="fd-type" style="background:${COLORS.DeliveryPartner}">DELIVERY PARTNER</div><h3>${e.id} · ${esc(e.name)}</h3>
-      ${row('Rating', e.rating + ' / 5')}${row('Commute type', e.commuteType)}${row('Vehicle', e.vehicle)}${row('Speed in traffic', Math.round(SPEED[e.commuteType] * 3.6) + ' km/h')}${row('Tips', '$' + e.tips.toFixed(2))}
-      ${row('Current order', current ? current.id : '—')}
+      ${row('Rating', e.rating + ' / 5')}${row('Commute', `${e.commuteType} · ${Math.round(SPEED[e.commuteType] * 3.6)} km/h`)}${row('Current order', current ? current.id : '—')}
       ${locationBlock(e.id)}
       <h4>DRIVES TO</h4>${to.map((id) => `<div class="fd-rel">→ ${link(id)} · ${min(travelMin(e.position, anchorOf(byId(id)), e.commuteType))} by ${e.commuteType.toLowerCase()}</div>`).join('')}
-      ${trip ? `<h4>DIRECTIONS (${trip.purpose})</h4>${trip.steps.map((s) => `<div class="fd-step">${esc(s)}</div>`).join('')}` : ''}
+      ${trip ? det(`dir-${e.id}`, `🧭 Directions · ${esc(trip.purpose)}`, trip.steps.map((s) => `<div class="fd-step">${esc(s)}</div>`).join('')) : ''}
       ${confidentialityBlock(e)}
       <h4>ACTIONS</h4><button data-act="track">Track delivery</button>`;
   } else if (e.type === 'Restaurant') {
     const drivers = rels.filter((r) => r.type === 'drivesTo' && r.to === e.id).map((r) => r.from);
     const orders = model.orders.filter((o) => o.restaurant === e.id);
     html = `<div class="fd-type" style="background:${COLORS.Restaurant}">RESTAURANT</div><h3>${e.id} · ${esc(e.name)}</h3>
-      ${row('Cuisine type', e.cuisineType.join(', '))}${row('Store type', e.storeType)}${row('Prep time', e.prepTime + ' min')}${row('Orders', orders.length)}
+      ${row('Cuisine · type', `${e.cuisineType.join(', ')} · ${e.storeType}`)}${row('Prep time', e.prepTime + ' min')}
       ${locationBlock(e.id)}
       <h4>RELATIONSHIPS</h4><div class="fd-rel">partners with ← ${link('UE01')} <span class="fd-chip-ue">sticker in window</span></div>
       ${drivers.map((id) => `<div class="fd-rel">driven to by ← ${link(id)}</div>`).join('')}
@@ -588,22 +606,22 @@ function renderPanel() {
   } else if (e.type === 'Customer') {
     html = `<div class="fd-type" style="background:${COLORS.Customer}">CUSTOMER</div><h3>${e.id} · ${esc(e.name)}</h3>
       ${locationBlock(e.id)}
-      <h4>PROFILE (private account info)</h4>${Object.entries(e.profile).map(([k, v]) => row(FIELD_NAMES[k], v)).join('')}
-      <h4>DELIVERY INFO (shared only when needed)</h4>${Object.entries(e.delivery).map(([k, v]) => row(FIELD_NAMES[k], v)).join('')}
-      <div class="fd-note">A delivery partner sees the exact address only after accepting this customer's order.</div>
+      ${det(`prof-${e.id}`, '🔒 Private profile', Object.entries(e.profile).map(([k, v]) => row(FIELD_NAMES[k], v)).join(''))}
+      ${det(`deliv-${e.id}`, '📦 Delivery info (shared only when needed)', Object.entries(e.delivery).map(([k, v]) => row(FIELD_NAMES[k], v)).join(''))}
       <h4>ACTIONS</h4><button data-act="profile">Edit profile</button>`;
   } else if (e.type === 'Order') {
     const err = validateOrder(e);
     const est = estimate(e);
     html = `<div class="fd-type" style="background:${COLORS.Order}">ORDER · PARCEL</div><h3>${e.id}</h3>
-      ${row('Status', e.status)}${row('Items', e.items.join(', '))}${row('Order value', '$' + e.orderValue.toFixed(2))}${row('Paid', e.paid ? 'Yes' : 'No')}
+      ${row('Status', e.status)}${row('Items', e.items.join(', '))}${row('Paid', e.paid ? `Yes · $${e.orderValue.toFixed(2)}` : 'No')}
       <div class="fd-eta"><span>Estimated delivery<small>${etaParts(e, est)}</small></span><b>${e.status === 'Delivered' ? '✓' : min(est.total)}</b></div>
       ${locationBlock(e.id)}
       <h4>RELATIONSHIPS</h4><div class="fd-rel">placed by → ${link(e.customer)}</div><div class="fd-rel">ordered from → ${link(e.restaurant)}</div>
       <div class="fd-rel">assigned to → ${e.deliveryPartner ? link(e.deliveryPartner) : '—'}</div><div class="fd-rel">delivered through → ${link('UE01')}</div>
-      <h4>RULES</h4><div class="${err ? 'fd-locked' : 'fd-ok'}">${err ? '⚠ ' + esc(err) : '✓ Order is valid and has a delivery time'}</div>
+      <div class="${err ? 'fd-locked' : 'fd-ok'}">${err ? '⚠ ' + esc(err) : '✓ Valid order with a delivery time'}</div>
       <h4>ACTIONS</h4><button data-act="pay">Receive payment</button><button data-act="track">Track delivery</button>`;
   }
+  html = `<button class="fd-x" data-close title="Close">×</button>` + html;
   if (panel.dataset.html === html) return; // unchanged — keep the DOM (and any click in progress)
   const chat = panel.querySelector('.fd-chat')?.innerHTML;
   panel.innerHTML = html;
@@ -989,6 +1007,7 @@ function ask(q) {
 }
 
 panel.addEventListener('click', (ev) => {
+  if (ev.target.closest('[data-close]')) return select(null);
   const go = ev.target.closest('[data-go]');
   if (go) return select(go.dataset.go);
   const q = ev.target.closest('[data-ask]');
@@ -1111,22 +1130,40 @@ function processOrders() {
       toast(`Order ${o.id} is ready for pickup at ${r.name}.`);
     }
     if (dp && ['Preparing', 'Ready for Pickup'].includes(o.status) && o.departAt != null && simMin >= o.departAt && !trips.get(dp.id)?.order && !o.riderAtRestaurant) {
-      const rt = startTrip(dp, anchorOf(r), `driving to ${r.name}`, o.id);
+      const rt = startTrip(dp, anchorOf(r), `driving to ${r.name}`, o.id, r.id);
       toast(`${dp.id} is driving to ${r.name} — ${Math.round(rt.length)} m via ${rt.steps.map((x) => x.split(' on ')[1].split(' —')[0]).filter((v, i, a) => a.indexOf(v) === i).slice(0, 3).join(', ')}.`);
     }
-    if (dp && o.riderAtRestaurant && o.status === 'Ready for Pickup') {
+    if (dp && o.riderAtRestaurant && o.status === 'Ready for Pickup' && position.isAdjacent(dp, anchorOf(r))) {
       o.status = 'Picked Up';
       o.parcel = dp.id;
       o.pickedAt = simMin;
       const est = estimate(o);
-      toast(`Order ${o.id} picked up by ${dp.id} at ${clockText(simMin)}.`);
+      toast(`${dp.id} is ADJACENT to ${r.name} → pickup: ${o.id} goes INTO the bag (${clockText(simMin)}).`);
       setTimeout(() => {
         if (o.status !== 'Picked Up' || !model.orders.includes(o)) return;
         o.status = 'Out for Delivery';
-        startTrip(dp, anchorOf(c), `delivering ${o.id} to ${c.name}`, o.id);
+        startTrip(dp, anchorOf(c), `delivering ${o.id} to ${c.name}`, o.id, c.id);
         toast(`${dp.id} is travelling to ${c.name} — estimated delivery ${min(estimate(o).total)}.`);
       }, (HANDOFF[dp.commuteType] * 60 * 1000) / timeScale);
       void est;
+    }
+    // "deliver" capability: the hand-over happens only once the rider is ADJACENT to the door
+    if (dp && o.status === 'Out for Delivery' && o.atDoor && !o.handoff && position.isAdjacent(dp, anchorOf(c))) {
+      o.handoff = true;
+      toast(`${dp.id} is ADJACENT to ${c.name}'s door → delivering ${o.id}.`);
+      setTimeout(() => {
+        if (!model.orders.includes(o)) return;
+        o.status = 'Delivered';
+        o.deliveredAt = simMin;
+        o.parcel = o.customer;
+        o.active = false;
+        dp.tips += 3;
+        model.stats.delivered += 1;
+        model.stats.totalMinutes += simMin - o.placedAt;
+        toast(`Order ${o.id} delivered to ${c.name} at ${clockText(simMin)} — ${Math.round(simMin - o.placedAt)} min after ordering.`, 'ok');
+        if (follow === o.id) follow = null;
+        render(true);
+      }, (HANDOFF[dp.commuteType] * 60 * 1000) / timeScale);
     }
     o.estimatedDeliveryTime = Math.round(estimate(o).total);
   }
@@ -1139,19 +1176,7 @@ function arrive(dp, trip) {
     o.riderAtRestaurant = true;
     if (o.status !== 'Ready for Pickup') toast(`${dp.id} arrived at ${byId(o.restaurant).name} and is waiting — the food needs ${min(o.readyAt - simMin)} more.`);
   } else {
-    setTimeout(() => {
-      if (!model.orders.includes(o)) return;
-      o.status = 'Delivered';
-      o.deliveredAt = simMin;
-      o.parcel = o.customer;
-      o.active = false;
-      dp.tips += 3;
-      model.stats.delivered += 1;
-      model.stats.totalMinutes += simMin - o.placedAt;
-      toast(`Order ${o.id} delivered to ${byId(o.customer).name} at ${clockText(simMin)} — ${Math.round(simMin - o.placedAt)} min after ordering.`, 'ok');
-      if (follow === o.id) follow = null;
-      render();
-    }, (HANDOFF[dp.commuteType] * 60 * 1000) / timeScale);
+    o.atDoor = true; // the hand-over itself waits for adjacency (see processOrders)
   }
 }
 
@@ -1192,7 +1217,7 @@ function startIdleRuns() {
   for (const dp of model.deliveryPartners) {
     if (dp.id === 'DP01') continue;
     const rel = model.relationships.find((r) => r.type === 'drivesTo' && r.from === dp.id);
-    if (rel) startTrip(dp, anchorOf(byId(rel.to)), `driving to ${byId(rel.to).name} for the lunch rush`);
+    if (rel) startTrip(dp, anchorOf(byId(rel.to)), `driving to ${byId(rel.to).name} for the lunch rush`, null, rel.to);
   }
 }
 
@@ -1320,7 +1345,7 @@ function onDistanceChange(routes) {
     const t = trips.get(dp.id);
     if (!t) continue;
     const before = t.len - t.s;
-    const r = startTrip(dp, t.target, t.purpose, t.order);
+    const r = startTrip(dp, t.target, t.purpose, t.order, t.targetId);
     if (r.length > before + 20) toast(`${dp.id} re-routed around the closure: +${Math.round(r.length - before)} m.`, 'warn');
   }
 }
@@ -1351,31 +1376,90 @@ const proximity = createProximity({
   },
 });
 
+// ===========================================================================
+// 10. Position + Movement (workshop): prepositions computed live, with indicators
+// ===========================================================================
+position = createPosition({
+  scene,
+  city,
+  riders: () => model.deliveryPartners,
+  places: () => [...model.restaurants, ...model.customers].map((e) => ({ id: e.id, name: e.name, at: anchorOf(e) })),
+  orders: () => model.orders,
+  parcelPlace,
+  nameOf: (id) => byId(id)?.name || id,
+  trips,
+  clock: Object.assign(() => clockText(simMin), { raw: () => simMin }),
+  closures: () => [...CLOSURES.keys()].map((id) => edgeById(id)).filter(Boolean).map((e) => ({ id: e.id, label: e.label, a: NODES.get(e.a), b: NODES.get(e.b) })),
+});
+const posEl = root.querySelector('.fd-pos');
+const movEl = root.querySelector('.fd-mov');
+posEl.innerHTML = `<div class="fd-q-title">Position · where things are relative to each other</div>
+  <label class="fd-closure"><input type="checkbox" class="fd-pos-show" checked /> Show position indicators</label><div class="fd-pos-live"></div>`;
+movEl.innerHTML = `<div class="fd-q-title">Movement · how things move relative to each other</div>
+  <label class="fd-closure"><input type="checkbox" class="fd-mov-show" checked /> Show movement indicators</label><div class="fd-mov-live"></div>`;
+posEl.querySelector('.fd-pos-show').addEventListener('change', (e) => (position.showPos.value = e.target.checked));
+movEl.querySelector('.fd-mov-show').addEventListener('change', (e) => (position.showMov.value = e.target.checked));
+const chip = (color, label) => `<span class="fd-prep" style="--c:${color}">${label}</span>`;
+function renderPositionPanels() {
+  const L = position.live;
+  const list = (items, empty) => (items.length ? items.slice(0, 6).map((t) => `<div class="fd-rel">${esc(t)}</div>`).join('') : `<div class="fd-note">${empty}</div>`);
+  const pos = `
+    <div class="fd-pgroup">${chip('#8a6a2f', 'IN / ON')}<small>parcel relative to its container</small>${list(L.inOn, '—')}</div>
+    <div class="fd-pgroup">${chip('#16a34a', 'ADJACENT')}<small>≤ 4 m, nothing occupiable between → pickup / delivery happens</small>${list(L.adjacent, 'No rider is adjacent to a door right now.')}</div>
+    <div class="fd-pgroup">${chip('#f59e0b', 'BETWEEN')}<small>a person or vehicle between a rider and its next turn → rider yields</small>${list(L.between, 'Nothing between riders and their next turn.')}</div>
+    <div class="fd-pgroup">${chip('#7c3aed', 'AMONG')}<small>3+ people clustered → circle drawn; riders inside slow to half speed</small><div class="fd-rel">${L.clusters.length} cluster${L.clusters.length === 1 ? '' : 's'} of people${L.clusters.length ? ` · largest ×${Math.max(...L.clusters.map((c) => c.n))}` : ''}</div></div>
+    <div class="fd-pgroup">${chip('#2563eb', 'BEHIND')}<small>rider following a vehicle in its lane</small>${list(L.behind, 'No rider is behind a vehicle.')}</div>
+    <div class="fd-pgroup">${chip('#dc2626', 'WARN')}<small>barricades warn riders that come within 24 m</small>${list(L.warned, 'No warnings.')}</div>`;
+  const mov = `
+    <div class="fd-pgroup">${chip('#16a34a', 'TOWARD')} ${chip('#dc2626', 'AWAY FROM')}<small>arrow over each moving rider: is it getting closer to its target?</small>${list(L.movement, 'No rider is moving.')}</div>
+    <div class="fd-pgroup">${chip('#8a6a2f', 'INTO / OUT OF')} ${chip('#0ea5e9', 'PAST')} ${chip('#db2777', 'AROUND')}<small>events, each marked by a pulse on the map</small>
+      ${position.log.length ? position.log.slice(0, 8).map((e) => `<div class="fd-ev"><span>${esc(e.t)}</span> ${esc(e.text)}</div>`).join('') : '<div class="fd-note">Press ▶ Track delivery to see movement events.</div>'}</div>`;
+  const pl = posEl.querySelector('.fd-pos-live'), ml = movEl.querySelector('.fd-mov-live');
+  if (!pl.matches(':hover') && pl.dataset.html !== pos) { pl.innerHTML = pos; pl.dataset.html = pos; }
+  if (!ml.matches(':hover') && ml.dataset.html !== mov) { ml.innerHTML = mov; ml.dataset.html = mov; }
+}
+
+let leftMode = 'position';
 function setLeftMode(mode) {
-  root.classList.toggle('fd-mode-proximity', mode === 'proximity');
-  root.classList.toggle('fd-mode-distance', mode === 'distance');
-  root.classList.toggle('fd-mode-locate', mode === 'locate');
-  root.classList.toggle('fd-hide-loc', mode === 'none');
+  leftMode = mode;
+  for (const m of ['position', 'movement', 'proximity', 'distance', 'locate']) root.classList.toggle(`fd-mode-${m}`, mode === m);
+  root.querySelectorAll('.fd-sidetabs button').forEach((b) => b.classList.toggle('on', b.dataset.side === mode));
   distanceMode = mode === 'distance';
   distGroup.visible = distanceMode;
-  root.querySelector('[data-tool=distance]').classList.toggle('on', mode === 'distance');
-  root.querySelector('[data-tool=locate]').classList.toggle('on', mode === 'locate');
-  root.querySelector('[data-tool=proximity]').classList.toggle('on', mode === 'proximity');
   if (distanceMode) distance.refresh(true);
 }
+root.querySelector('.fd-sidetabs').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-side]');
+  if (b) setLeftMode(b.dataset.side);
+  if (ev.target.closest('[data-collapse]')) root.classList.toggle('fd-collapsed');
+});
+// on-screen navigation buttons
+root.querySelector('.fd-nav').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-nav]');
+  if (!b) return;
+  follow = null;
+  const off = camera.position.clone().sub(controls.target);
+  const n = b.dataset.nav;
+  if (n === 'in' || n === 'out') {
+    const k = n === 'in' ? 0.7 : 1.4;
+    const len = THREE.MathUtils.clamp(off.length() * k, controls.minDistance, controls.maxDistance);
+    fly = { fromT: controls.target.clone(), toT: controls.target.clone(), fromP: camera.position.clone(), toP: controls.target.clone().add(off.setLength(len)), k: 0.4 };
+  } else if (n === 'left' || n === 'right') {
+    off.applyAxisAngle(new THREE.Vector3(0, 1, 0), n === 'left' ? 0.5 : -0.5);
+    fly = { fromT: controls.target.clone(), toT: controls.target.clone(), fromP: camera.position.clone(), toP: controls.target.clone().add(off), k: 0.4 };
+  } else if (n === 'top') {
+    fly = { fromT: controls.target.clone(), toT: controls.target.clone(), fromP: camera.position.clone(), toP: controls.target.clone().add(new THREE.Vector3(0.01, Math.max(off.length(), 200), 40)), k: 0 };
+  } else if (n === 'home') {
+    fly = { fromT: controls.target.clone(), toT: HOME.target.clone(), fromP: camera.position.clone(), toP: HOME.pos.clone(), k: 0 };
+  }
+});
 
 // --- Toolbar ---------------------------------------------------------------------
 root.querySelector('.fd-toolbar').addEventListener('click', (ev) => {
   const b = ev.target.closest('button');
   if (!b) return;
   const a = b.dataset.tool;
-  if (a === 'routes') {
-    showRoutes = !showRoutes;
-    ribbons.forEach((r) => (r.visible = showRoutes));
-    b.classList.toggle('on', showRoutes);
-  } else if (a === 'locate' || a === 'distance' || a === 'proximity') {
-    setLeftMode(b.classList.contains('on') ? 'none' : a);
-  } else if (a === 'reset') {
+  if (a === 'reset') {
     resetAll();
     toast('Model reset to the initial example.');
   } else if (a === 'assist') {
@@ -1459,7 +1543,8 @@ function tick() {
   processOrders();
   city.setObstacles(model.deliveryPartners.filter((d) => trips.has(d.id)).map((d) => d.position)); // parked riders sit at the kerb
   proximity.update(dt, dtSim, trips);
-  stepRiders(dtSim, proximity.factor);
+  stepRiders(dtSim, (id) => proximity.factor(id) * (position.inCrowd(id) ? 0.5 : 1)); // AMONG a crowd → half speed
+  position.update(dt);
 
   // parcels follow their container
   for (const o of model.orders) {
@@ -1502,11 +1587,16 @@ function tick() {
     camera.position.lerpVectors(fly.fromP, fly.toP, e);
     if (fly.k >= 1) fly = null;
   }
+  // keep the view over the site
+  const cx = THREE.MathUtils.clamp(controls.target.x, BOUNDS.x0, BOUNDS.x1) - controls.target.x;
+  const cz = THREE.MathUtils.clamp(controls.target.z, BOUNDS.z0, BOUNDS.z1) - controls.target.z;
+  if (cx || cz) { controls.target.x += cx; controls.target.z += cz; camera.position.x += cx; camera.position.z += cz; }
   city.update(dt, t, controls.target, dtSim);
   uiTimer += dt;
   if (uiTimer > 0.4) {
     uiTimer = 0;
     render();
+    renderPositionPanels();
     if (distanceMode) distance.refresh();
     if (!locBody.matches(':hover') && !locBody.contains(document.activeElement)) updateLocOut();
     const o0 = model.orders.find((o) => o.id === 'O01');
@@ -1533,8 +1623,8 @@ buildEntities();
 startIdleRuns();
 render();
 renderLocTab();
-setLeftMode('proximity');
 proximity.select('DP02');
+setLeftMode('position');
 onDistanceChange(distance.routes());
 resize();
 tick();
