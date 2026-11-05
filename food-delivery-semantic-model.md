@@ -131,3 +131,25 @@ An **intensity bar** (low → medium → extreme) shows how close the nearest mo
 - **IF** the rider is within 1 block of the customer **THEN** reveal the buzzer/apartment **ELSE** show the area only.
 
 Traffic is part of the simulation: 21 signalised junctions on a 70 s cycle, cars and scooters that keep a following distance and brake for people and riders, and pedestrians who wait for the walk signal (a few jaywalk). The numbers of vehicles, scooters/bikes and pedestrians can be changed live.
+
+## Positioning (prepositions of place)
+
+Each notion is computed live from the simulation, has a visual indicator in the 3D scene, and uses an explicit distance metric.
+
+| Notion | Meaning in the model | Distance metric / test | Indicator | Behaviour it triggers |
+|---|---|---|---|---|
+| **IN / ON** | Parcel IN the kitchen, ON the pickup shelf, IN the rider's bag, AT the door | Containment: the parcel's location is its container's location | Tag over the parcel ("IN DP01's bag") | — |
+| **ADJACENT** | Rider and door with **no occupiable location between them** | Euclidean distance ≤ 4 m **and** no person or vehicle within 0.9 m of the line between them | Green double link + "ADJACENT" tag | **Deliver / pick up**: the hand-over only happens when adjacent |
+| **BETWEEN** | A person or vehicle between a rider and its next turn | Projection onto the rider→turn segment: 1–18 m along, < 1.8 m lateral | Amber lines rider → object → turn + tag | Rider yields |
+| **AMONG** | 3 or more people clustered together | Single-link clustering, ≤ 3.5 m apart, ≥ 3 people | Purple circle drawn round the cluster | Riders inside a cluster slow to half speed |
+| **BEHIND** | Rider following a vehicle in its lane | 0–14 m ahead along the heading, < 2.2 m lateral | Blue "BEHIND car" tag | Rider keeps its following distance |
+| **WARN** (capability) | Road-closure barricades warn riders that come near | Euclidean distance to either end of the closed block < 24 m | Red "⚠ ROAD CLOSED AHEAD" over the rider | Rider is re-routed |
+
+## Movement (prepositions of movement)
+
+| Notion | Test | Indicator |
+|---|---|---|
+| **TOWARD / AWAY FROM** | Smoothed change in distance to the rider's target: falling = toward, rising = away | Green / red arrow over the rider + "→ TOWARD · 240 m" |
+| **INTO / OUT OF** | The parcel's container changes (INTO the bag, OUT OF the bag INTO the customer's hands); a rider crosses a crowd circle | Pulse on the map + event log |
+| **PAST** | Along-heading coordinate of a restaurant, door or rider flips from ahead to behind, within 28 m laterally | Pulse + "DP01 went PAST Trattoria Roma" |
+| **AROUND** | Route length on the street network vs. the route with every street open: more than 20 m longer | Pink "↻ going AROUND (+300 m)" tag over the closure |

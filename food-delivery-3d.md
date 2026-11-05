@@ -1,5 +1,5 @@
 ---
-title: Food Delivery — Morningside Heights
+title: Positioning + Movement — Food Delivery, Morningside Heights
 ---
 
 # Food Delivery — Morningside Heights
@@ -32,6 +32,7 @@ Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it,
 #fd3d .fd-x { position: sticky; top: 0; float: right; margin: -4px -6px 0 0; width: 26px; height: 26px; padding: 0; font-size: 16px; line-height: 1; border-radius: 50%; }
 #fd3d .fd-prep { display: inline-block; font: 800 10px system-ui; letter-spacing: .06em; color: #fff; background: var(--c); border-radius: 4px; padding: 2px 6px; margin-right: 2px; }
 #fd3d .fd-pgroup { border-left: 3px solid #eee; padding: 4px 0 4px 8px; margin: 6px 0; }
+#fd3d .fd-metric { color: #1d4ed8 !important; font-weight: 600; }
 #fd3d .fd-pgroup small { display: block; color: #666; font-size: 11px; margin: 2px 0; }
 #fd3d .fd-ev { font-size: 11.5px; padding: 2px 0; border-bottom: 1px dashed #eee; }
 #fd3d .fd-ev span { color: #888; font-variant-numeric: tabular-nums; }
@@ -157,7 +158,7 @@ Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it,
     <div class="fd-status fd-card"></div>
     <div class="fd-side fd-card">
       <div class="fd-sidetabs">
-        <button data-side="position" class="on">POSITION</button>
+        <button data-side="position" class="on">POSITIONING</button>
         <button data-side="movement">MOVEMENT</button>
         <button data-side="proximity">PROXIMITY</button>
         <button data-side="distance">DISTANCE</button>

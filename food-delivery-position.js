@@ -73,7 +73,7 @@ export function createPosition({ scene, city, riders, places, orders, parcelPlac
     }
     m.material.color.set(color);
     m.material.opacity = opacity;
-    m.position.set(x, 0.4, z);
+    m.position.set(x, (city.groundAt ? city.groundAt(x, z) : 0) + 0.3, z);
     m.scale.setScalar(r);
     m.visible = true;
     ci++;
@@ -277,7 +277,7 @@ export function createPosition({ scene, city, riders, places, orders, parcelPlac
         const moving = Math.abs(tr) > 0.02;
         const toward = tr < 0;
         const label = `${dp.id} ${moving ? (toward ? 'TOWARD' : 'AWAY FROM') : 'stopped near'} ${trip.purpose.replace(/^(driving to|delivering \S+ to) /, '').replace(/ for the lunch rush$/, '')} · ${Math.round(dist)} m`;
-        live.movement.push(label);
+        live.movement.push(label + (trip.around ? ` · ↻ going AROUND a closure (+${Math.round(trip.around.extra)} m)` : ''));
         if (showMov.value && moving) arrow(dp.id, pos.x, pos.z, h, toward ? COLORS.toward : COLORS.away);
         if (showMov.value) tag(`mv-${dp.id}`, moving ? (toward ? `→ TOWARD · ${Math.round(dist)} m` : `← AWAY FROM · ${Math.round(dist)} m`) : 'waiting', moving ? (toward ? COLORS.toward : COLORS.away) : '#6b7280', pos.x, 10.8, pos.z);
 
@@ -298,7 +298,11 @@ export function createPosition({ scene, city, riders, places, orders, parcelPlac
           const lat = Math.abs((o.x - pos.x) * h.z - (o.z - pos.z) * h.x);
           const key = `${dp.id}|${o.id}`;
           const before = prevAlong.get(key);
-          if (before != null && before > 0 && along <= 0 && lat < 28 && o.id !== trip.targetId) event('past', `${dp.id} went PAST ${o.name}`, o.x, o.z);
+          trip.passed ??= new Set();
+          if (before != null && before > 0 && along <= 0 && lat < 28 && o.id !== trip.targetId && !trip.passed.has(o.id)) {
+            trip.passed.add(o.id); // each object counts once per trip
+            event('past', `${dp.id} went PAST ${o.name}`, o.x, o.z);
+          }
           prevAlong.set(key, along);
         }
       }

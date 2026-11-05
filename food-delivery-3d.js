@@ -1393,7 +1393,7 @@ position = createPosition({
 });
 const posEl = root.querySelector('.fd-pos');
 const movEl = root.querySelector('.fd-mov');
-posEl.innerHTML = `<div class="fd-q-title">Position · where things are relative to each other</div>
+posEl.innerHTML = `<div class="fd-q-title">Positioning · where things are relative to each other</div>
   <label class="fd-closure"><input type="checkbox" class="fd-pos-show" checked /> Show position indicators</label><div class="fd-pos-live"></div>`;
 movEl.innerHTML = `<div class="fd-q-title">Movement · how things move relative to each other</div>
   <label class="fd-closure"><input type="checkbox" class="fd-mov-show" checked /> Show movement indicators</label><div class="fd-mov-live"></div>`;
@@ -1403,16 +1403,20 @@ const chip = (color, label) => `<span class="fd-prep" style="--c:${color}">${lab
 function renderPositionPanels() {
   const L = position.live;
   const list = (items, empty) => (items.length ? items.slice(0, 6).map((t) => `<div class="fd-rel">${esc(t)}</div>`).join('') : `<div class="fd-note">${empty}</div>`);
+  const metric = (t) => `<small class="fd-metric">📏 ${t}</small>`;
   const pos = `
-    <div class="fd-pgroup">${chip('#8a6a2f', 'IN / ON')}<small>parcel relative to its container</small>${list(L.inOn, '—')}</div>
-    <div class="fd-pgroup">${chip('#16a34a', 'ADJACENT')}<small>≤ 4 m, nothing occupiable between → pickup / delivery happens</small>${list(L.adjacent, 'No rider is adjacent to a door right now.')}</div>
-    <div class="fd-pgroup">${chip('#f59e0b', 'BETWEEN')}<small>a person or vehicle between a rider and its next turn → rider yields</small>${list(L.between, 'Nothing between riders and their next turn.')}</div>
-    <div class="fd-pgroup">${chip('#7c3aed', 'AMONG')}<small>3+ people clustered → circle drawn; riders inside slow to half speed</small><div class="fd-rel">${L.clusters.length} cluster${L.clusters.length === 1 ? '' : 's'} of people${L.clusters.length ? ` · largest ×${Math.max(...L.clusters.map((c) => c.n))}` : ''}</div></div>
-    <div class="fd-pgroup">${chip('#2563eb', 'BEHIND')}<small>rider following a vehicle in its lane</small>${list(L.behind, 'No rider is behind a vehicle.')}</div>
-    <div class="fd-pgroup">${chip('#dc2626', 'WARN')}<small>barricades warn riders that come within 24 m</small>${list(L.warned, 'No warnings.')}</div>`;
+    <div class="fd-pgroup">${chip('#8a6a2f', 'IN / ON')}<small>Where the parcel is relative to its container</small>${metric('Containment: parcel → kitchen / pickup shelf / rider bag / door (the container\'s location is the parcel\'s location)')}${list(L.inOn, '—')}</div>
+    <div class="fd-pgroup">${chip('#16a34a', 'ADJACENT')}<small>Rider and door with no occupiable location between them → pickup / delivery only happens then</small>${metric('Euclidean distance ≤ 4 m AND no person or vehicle within 0.9 m of the line between them')}${list(L.adjacent, 'No rider is adjacent to a door right now.')}</div>
+    <div class="fd-pgroup">${chip('#f59e0b', 'BETWEEN')}<small>A person or vehicle between a rider and its next turn → rider yields</small>${metric('Projection onto rider→turn segment: 1 m < along < 18 m and lateral offset < 1.8 m')}${list(L.between, 'Nothing between riders and their next turn.')}</div>
+    <div class="fd-pgroup">${chip('#7c3aed', 'AMONG')}<small>3+ people clustered → a circle is drawn round them; riders inside slow to half speed</small>${metric('Single-link clustering: each person within 3.5 m of another, ≥ 3 people; circle radius = farthest member + 1.6 m')}<div class="fd-rel">${L.clusters.length} cluster${L.clusters.length === 1 ? '' : 's'} of people${L.clusters.length ? ` · largest ×${Math.max(...L.clusters.map((c) => c.n))}` : ''}</div></div>
+    <div class="fd-pgroup">${chip('#2563eb', 'BEHIND')}<small>Rider following a vehicle in its lane</small>${metric('Vehicle ahead along the rider\'s heading: 0–14 m along, < 2.2 m lateral')}${list(L.behind, 'No rider is behind a vehicle.')}</div>
+    <div class="fd-pgroup">${chip('#dc2626', 'WARN')}<small>Capability: road-closure barricades warn riders that come near</small>${metric('Euclidean distance from rider to either end of a closed block < 24 m')}${list(L.warned, 'No warnings.')}</div>`;
   const mov = `
-    <div class="fd-pgroup">${chip('#16a34a', 'TOWARD')} ${chip('#dc2626', 'AWAY FROM')}<small>arrow over each moving rider: is it getting closer to its target?</small>${list(L.movement, 'No rider is moving.')}</div>
-    <div class="fd-pgroup">${chip('#8a6a2f', 'INTO / OUT OF')} ${chip('#0ea5e9', 'PAST')} ${chip('#db2777', 'AROUND')}<small>events, each marked by a pulse on the map</small>
+    <div class="fd-pgroup">${chip('#16a34a', 'TOWARD')} ${chip('#dc2626', 'AWAY FROM')}<small>Arrow over each moving rider: is it getting closer to its target?</small>${metric('Change in straight-line distance to the target per update (smoothed): falling = toward, rising = away')}${list(L.movement, 'No rider is moving.')}</div>
+    <div class="fd-pgroup">${chip('#8a6a2f', 'INTO / OUT OF')}<small>Parcel into the bag / out to the customer; riders into / out of a crowd</small>${metric('Change of container, or crossing a crowd circle\'s radius')}</div>
+    <div class="fd-pgroup">${chip('#0ea5e9', 'PAST')}<small>Rider goes past a restaurant, door or another rider</small>${metric('Along-heading coordinate changes sign (ahead → behind) with lateral distance < 28 m')}</div>
+    <div class="fd-pgroup">${chip('#db2777', 'AROUND')}<small>Rider de-routes around a road closure</small>${metric('Street-network route length vs. the route if every street were open: > 20 m longer')}</div>
+    <div class="fd-pgroup"><b>Event log</b> <small>each event also pulses on the map</small>
       ${position.log.length ? position.log.slice(0, 8).map((e) => `<div class="fd-ev"><span>${esc(e.t)}</span> ${esc(e.text)}</div>`).join('') : '<div class="fd-note">Press ▶ Track delivery to see movement events.</div>'}</div>`;
   const pl = posEl.querySelector('.fd-pos-live'), ml = movEl.querySelector('.fd-mov-live');
   if (!pl.matches(':hover') && pl.dataset.html !== pos) { pl.innerHTML = pos; pl.dataset.html = pos; }
