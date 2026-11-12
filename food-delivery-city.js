@@ -3,7 +3,7 @@
 // St. John the Divine, Riverside and Morningside Parks, the Hudson, traffic and people.
 // Decorative except for the street grid, which comes from the location model.
 import * as THREE from 'three';
-import { AVENUES, BLOCK, streetZ, streetWidth, streetShort, streetSegmentKind, zoneAt, HUDSON_X, PARKWAY_X } from './food-delivery-location.js?v=9';
+import { AVENUES, BLOCK, streetZ, streetWidth, streetShort, streetSegmentKind, zoneAt, HUDSON_X, PARKWAY_X } from './food-delivery-location.js?v=10';
 
 // What is drawn: the site (W 111th–116th, Broadway–Morningside Dr) plus about one block of context.
 const VIS = { x0: -270, x1: 400, z0: streetZ(117.6), z1: streetZ(110) + 16 };

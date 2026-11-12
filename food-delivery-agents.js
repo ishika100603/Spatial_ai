@@ -2,8 +2,8 @@
 // build their own map (streets, closures, one-ways, landmarks, parking spots) and
 // plan every leg on that map — no route is given to them. Repeating runs makes them faster.
 import * as THREE from 'three';
-import { AVENUES, STREETS, streetZ, streetShort, EDGES, CLOSURES, streetWidth } from './food-delivery-location.js?v=9';
-import { textSprite } from './food-delivery-city.js?v=9';
+import { AVENUES, STREETS, streetZ, streetShort, EDGES, CLOSURES, streetWidth } from './food-delivery-location.js?v=10';
+import { textSprite } from './food-delivery-city.js?v=10';
 
 const D2R = Math.PI / 180;
 // Cone of vision per type: faster → sees further but narrower.

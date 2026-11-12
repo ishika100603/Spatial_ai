@@ -1,14 +1,14 @@
 import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
-import { createCity, textSprite } from './food-delivery-city.js?v=9';
+import { createCity, textSprite } from './food-delivery-city.js?v=10';
 import {
   AVENUES, STREETS, BLOCK, LANDMARKS, streetZ, streetShort, junction, route, describe, relativeTo,
   nearestLandmark, egocentric, toLatLon, parsePlace, nearestJunction, avenue, CLOSURES, NODES, edgeById, streetWidth,
-} from './food-delivery-location.js?v=9';
-import { createDistancePanel, PRESET_CLOSURES } from './food-delivery-distance.js?v=9';
-import { createProximity } from './food-delivery-proximity.js?v=9';
-import { createPosition } from './food-delivery-position.js?v=9';
-import { createAgents } from './food-delivery-agents.js?v=9';
+} from './food-delivery-location.js?v=10';
+import { createDistancePanel, PRESET_CLOSURES } from './food-delivery-distance.js?v=10';
+import { createProximity } from './food-delivery-proximity.js?v=10';
+import { createPosition } from './food-delivery-position.js?v=10';
+import { createAgents } from './food-delivery-agents.js?v=10';
 
 // ===========================================================================
 // 1. Semantic data — entities, attributes, relationships (no Three.js here)
