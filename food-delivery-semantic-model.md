@@ -164,10 +164,10 @@ One **main agent** (★ Kai, motorbike) is observed among a fleet of other couri
 | Cone of vision | Motorbike 60 m · 60°, car 45 m · 90°, e-bike 35 m · 120°, blocked by buildings (line of sight along street corridors). |
 | Obstacles, hindrances, affordances | Discovers missing streets (✕), closures (⛔), one-way Amsterdam Ave, parking spots (P). |
 | Other agents as obstacles | Keeps a gap behind agents, cars and crossing people, and stops at red lights. Parks on the kerb ≥ 16 m from crossings, never blocking a door or another parked agent. |
-| Goals + performance criteria | Kai: deliver to Priya's home (goal), with Ana's delivery on the way, then back to the kitchen. Criterion: time vs. the ideal run. |
+| Goals + performance criteria | Kai: from Wok on Wheels, deliver to Ana's home (goal) with Priya's delivery on the way, then back to the truck. Criterion: time vs. the ideal run. |
 | Multiple deliveries per run | It tests every pickup/drop order on its *own* map and takes the cheapest. No route is given to it. |
 | Landmarks | Restaurants 🍽️, churches ⛪, schools 🏫, parks 🌳, station 🚇. Positions are stated relative to them ("40 m S of ⛪ Cathedral"). |
 | Landmarks accelerate traversal | Known doors → no slow search; known parking spots → park straight away; familiar streets → faster. |
 | Visualise one agent's knowledge | 🧠 Map: green = known street, ✕ = no road, ⛔ = closure, yellow = one-way, P = parking. Known landmarks glow. |
-| Path history / learning | 〰 Paths: every run in a red → green gradient, plus a minutes-per-run chart against the ideal. |
+| Path history / learning | 〰 Paths: every run in a red → green gradient, plus a minutes-per-run chart against the ideal. ⇄ Run 1 vs latest shows only the first and the newest run, each labelled with its minutes and metres. On run 1 Kai tries the campus streets (no road) and re-plans; later runs go straight via W 114th St. |
 | Many agents, aggregate | ＋/− adds agents. 🔥 All: shared street-use heat and how many agents know each landmark. |

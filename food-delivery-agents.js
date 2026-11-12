@@ -111,7 +111,7 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
   const reserved = new Map(); // agentId -> parking spot {x,z,mode}
   const edgeUse = new Map(); // aggregate street usage
   let simT = 0, focusId = 'KAI';
-  const view = { cones: true, mind: true, paths: true, heat: false };
+  const view = { cones: true, mind: true, paths: true, compare: false, heat: false };
   let fleetN = 12;
   let overlayDirty = true, overlayAcc = 0;
 
@@ -213,7 +213,7 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
       let seen = false;
       // standing near a junction you can see whether the block ahead has a street (or a wall, a barricade, a one-way sign)
       for (const [E, F] of [[h.A, h.B], [h.B, h.A]]) {
-        if (Math.hypot(E.x - x, E.z - z) < 30) {
+        if (Math.hypot(E.x - x, E.z - z) < 14) {
           const px = E.x + ((F.x - E.x) / h.len) * 12, pz = E.z + ((F.z - E.z) / h.len) * 12;
           if (inCone(ag, px, pz)) { seen = true; break; }
         }
@@ -312,11 +312,12 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
   function newRun(ag) {
     let stops;
     if (ag.main) {
-      // Kai: two parcels from Indian Kitchen — the goal is Priya's home, Ana's home is another delivery on the way.
+      // Kai: two parcels from Wok on Wheels — the goal is Ana's home, Priya's home is another delivery on the way.
+      // The obvious way east from Broadway (W 115th / W 116th) crosses the Columbia campus: no road there.
       stops = [
-        { kind: 'drop', place: placeById.get('C03'), label: "Ana's home (on the way)" },
-        { kind: 'drop', place: placeById.get('C01'), label: "Priya's home (goal)" },
-        { kind: 'pickup', place: placeById.get('R01'), label: 'back to Indian Kitchen', mustBeLast: true },
+        { kind: 'drop', place: placeById.get('C01'), label: "Priya's home (on the way)" },
+        { kind: 'drop', place: placeById.get('C03'), label: "Ana's home (goal)" },
+        { kind: 'pickup', place: placeById.get('R03'), label: 'back to Wok on Wheels', mustBeLast: true },
       ];
     } else {
       const rs = [RESTAURANTS[(Math.random() * 4) | 0], RESTAURANTS[(Math.random() * 4) | 0]];
@@ -360,10 +361,10 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
   // ----- agents -----
   function makeAgent(id, name, type, color, main = false) {
     const T = TYPES[type];
-    const start = main ? { x: -127.5, z: 205 } : (() => { const free = ROADS.filter((r) => !CLOSURES.has(r.id)); const h = free[Math.floor(Math.random() * free.length)]; const t = 0.25 + Math.random() * 0.5; return { x: h.A.x + (h.B.x - h.A.x) * t, z: h.A.z + (h.B.z - h.A.z) * t }; })();
+    const start = main ? { x: -171, z: streetZ(116) + 50 } : (() => { const free = ROADS.filter((r) => !CLOSURES.has(r.id)); const h = free[Math.floor(Math.random() * free.length)]; const t = 0.25 + Math.random() * 0.5; return { x: h.A.x + (h.B.x - h.A.x) * t, z: h.A.z + (h.B.z - h.A.z) * t }; })();
     const sh = snapRoad(start).h;
     const ag = {
-      id, name, type, T, color, main, pos: { ...start }, head: main ? { x: 0, z: 1 } : { x: (sh.B.x - sh.A.x) / sh.len, z: (sh.B.z - sh.A.z) / sh.len },
+      id, name, type, T, color, main, pos: { ...start }, head: main ? { x: -1, z: 0 } : { x: (sh.B.x - sh.A.x) / sh.len, z: (sh.B.z - sh.A.z) / sh.len },
       k: { edges: new Map(), lm: new Map(), spots: new Map() }, kv: 0, runs: [], log: [], state: 'park', dwell: main ? 4 : Math.random() * 20,
       run: null, leg: null, curEdge: sh.id, obsAcc: 0, blockT: 0, ignoreT: 0, moved: 0,
     };
@@ -527,8 +528,21 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
         void pid;
       }
     }
-    if (view.paths) {
+    const runTag = (r, color) => {
+      const p = r.trail[Math.floor(r.trail.length * (color === 'first' ? 0.3 : 0.6))] || r.trail[0];
+      const t = textSprite(`Run ${r.n} · ${(r.time / 60).toFixed(1)} min · ${Math.round(r.dist)} m`, { color: '#fff', bg: color === 'first' ? '#d62d20' : '#1a9850', size: 0.022 });
+      t.position.set(p.x, 7, p.z);
+      overlay.add(t);
+    };
+    if (view.compare && ag.runs.length) {
+      // only the first and the latest run: where the agent went before and after learning
+      const first = ag.runs[0], last = ag.runs[ag.runs.length - 1];
+      overlay.add(strip(first.trail, 0xd62d20, 1.6, 0.75, 0.9));
+      runTag(first, 'first');
+      if (last !== first) { overlay.add(strip(last.trail, 0x1a9850, 0.8, 0.95, 0.95)); runTag(last, 'last'); }
+    } else if (view.paths) {
       const runs = ag.runs.slice(-10);
+      if (ag.runs.length) { runTag(ag.runs[0], 'first'); if (ag.runs.length > 1) runTag(ag.runs[ag.runs.length - 1], 'last'); }
       runs.forEach((r, i) => overlay.add(strip(r.trail, runColor(i, runs.length), i === runs.length - 1 ? 1.1 : 0.7, 0.7 + i * 0.03, 0.85)));
       if (ag.run?.trail.length > 1) overlay.add(strip([...ag.run.trail, ag.pos], new THREE.Color(ag.main ? '#ffc400' : ag.color), 0.9, 1.05, 0.95));
       if (ag.leg) overlay.add(strip(ag.leg.points.slice(), 0xffffff, 0.35, 1.1, 0.7));
@@ -565,7 +579,7 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
     const first = all.length ? Math.round(100 * avg(all.map((a) => a.runs[0].eff))) : null;
     const last = all.length ? Math.round(100 * avg(all.map((a) => a.runs[a.runs.length - 1].eff))) : null;
     const html = `<div class="fd-ag-row"><b>Agents</b><button data-ag="-">−</button><span>${fleetN + 1}</span><button data-ag="+">+</button>
-      ${[['cones', '👁 Cone'], ['mind', '🧠 Map'], ['paths', '〰 Paths'], ['heat', '🔥 All']].map(([k, t]) => `<button data-agv="${k}" class="${view[k] ? 'on' : ''}">${t}</button>`).join('')}
+      ${[['cones', '👁 Cone'], ['mind', '🧠 Map'], ['paths', '〰 Paths'], ['compare', '⇄ Run 1 vs latest'], ['heat', '🔥 All']].map(([k, t]) => `<button data-agv="${k}" class="${view[k] ? 'on' : ''}">${t}</button>`).join('')}
       <button data-ag="kai">★ Kai</button></div>
       ${first !== null ? `<div class="fd-ag-sub">Efficiency · first run ${first}% → latest ${last}%</div>` : ''}`;
     if (barEl.dataset.html !== html) { barEl.innerHTML = html; barEl.dataset.html = html; }
@@ -613,7 +627,7 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
     const last = ag.runs[ag.runs.length - 1];
     return `<div class="fd-type" style="background:${ag.main ? '#c88a00' : ag.color}">${ag.main ? '★ MAIN AGENT' : 'AGENT'}</div>
       <h3>${esc(ag.name)} · ${ag.T.icon} ${ag.T.label}</h3>
-      <div class="fd-ag-goal">${ag.main ? '🎯 Goal: Priya’s home · Ana’s delivery on the way' : '🎯 2 orders this run'}</div>
+      <div class="fd-ag-goal">${ag.main ? '🎯 Goal: Ana’s home · Priya’s delivery on the way' : '🎯 2 orders this run'}</div>
       <div class="fd-ag-stops">${stops}</div>
       <div class="fd-ag-status">${status}</div>
       <div class="fd-ag-grid">
