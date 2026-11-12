@@ -167,7 +167,8 @@ One **main agent** (★ Kai, motorbike) is observed among a fleet of other couri
 | Goals + performance criteria | Kai: from Wok on Wheels, deliver to Ana's home (goal) with Priya's delivery on the way, then back to the truck. Criterion: time vs. the ideal run. |
 | Multiple deliveries per run | It tests every pickup/drop order on its *own* map and takes the cheapest. No route is given to it. |
 | Landmarks | Restaurants 🍽️, churches ⛪, schools 🏫, parks 🌳, station 🚇. Positions are stated relative to them ("40 m S of ⛪ Cathedral"). |
-| Landmarks accelerate traversal | Known doors → no slow search; known parking spots → park straight away; familiar streets → faster. |
+| Landmarks accelerate traversal | Known doors → no slow search and quicker hand-overs (parked time falls to about half after a few visits); known parking spots → park straight away. |
+| Learning from experience | Each street's real travel time (red lights and queues included) is remembered and used for planning; slow streets are logged (🐢) and avoided; untried streets are explored now and then (🧭). |
 | Visualise one agent's knowledge | 🧠 Map: green = known street, ✕ = no road, ⛔ = closure, yellow = one-way, P = parking. Known landmarks glow. |
 | Path history / learning | 〰 Paths: every run in a red → green gradient, plus a minutes-per-run chart against the ideal. ⇄ Run 1 vs latest shows only the first and the newest run, each labelled with its minutes and metres. On run 1 Kai tries the campus streets (no road) and re-plans; later runs go straight via W 114th St. |
 | Many agents, aggregate | ＋/− adds agents. 🔥 All: shared street-use heat and how many agents know each landmark. |

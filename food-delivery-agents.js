@@ -121,6 +121,7 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
     if (!s) return h.len * 0.95; // curious: an unseen block might be a shortcut
     if (s.state !== 'open') return Infinity;
     if (s.oneWay && from !== h.a) return Infinity;
+    if (s.pace) return h.len * s.pace * ag.T.speed; // how long this street really took it (red lights and queues included)
     return h.len / (s.uses >= 2 ? FAMILIAR : 1);
   }
   function truthCost(h, from) {
@@ -305,6 +306,9 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
     let len = 0;
     for (let i = 1; i < points.length; i++) len += Math.hypot(points[i].x - points[i - 1].x, points[i].z - points[i - 1].z);
     ag.leg = { stop, spot, points, len, s: 0, steps: r.steps };
+    if (!replan) { ag.edgeT0 = ag.clock || 0; ag.edgeD = 0; } // parked time is not street time
+    const unknown = r.steps.map((st) => HBY.get(st.id)).find((h) => !ag.k.edges.has(h.id));
+    if (!replan && unknown && ag.runs.length) note(ag, `🧭 exploring a street it has not seen: ${label(unknown)}`);
     ag.state = 'drive';
     if (!replan) ag.spotNote = spot.remembered ? 'remembered spot' : '';
     overlayDirty = true;
@@ -328,7 +332,7 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
     }
     const ord = chooseOrder(ag, stops, ag.pos, (h, f) => beliefCost(ag, h, f)) || { seq: stops };
     const ideal = chooseOrder(ag, stops, ag.pos, truthCost);
-    const dwell = stops.reduce((s, x) => s + DWELL[x.kind], 0);
+    const dwell = stops.reduce((s, x) => s + DWELL[x.kind] * 0.55, 0);
     ag.run = { n: ag.runs.length + 1, seq: ord.seq, idx: 0, t0: simT, dist: 0, replans: 0, trail: [{ ...ag.pos }], ideal: (ideal ? ideal.c / ag.T.speed : 0) + dwell };
     startLeg(ag, ord.seq[0]);
   }
@@ -338,7 +342,9 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
     ag.k.spots.set(st.place.id, { x: ag.leg.spot.x, z: ag.leg.spot.z, hx: ag.leg.spot.hx, hz: ag.leg.spot.hz });
     if (ag.leg.spot.hx !== undefined) ag.head = { x: ag.leg.spot.hx * Math.sign(ag.head.x * ag.leg.spot.hx + ag.head.z * ag.leg.spot.hz || 1), z: ag.leg.spot.hz * Math.sign(ag.head.x * ag.leg.spot.hx + ag.head.z * ag.leg.spot.hz || 1) };
     ag.state = 'park';
-    ag.dwell = DWELL[st.kind];
+    const visits = (ag.k.visits.get(st.place.id) || 0) + 1; // a door it knows (buzzer, entrance) is quicker to hand over at
+    ag.k.visits.set(st.place.id, visits);
+    ag.dwell = DWELL[st.kind] * Math.max(0.55, 1 - 0.15 * (visits - 1));
     ag.leg = null;
     note(ag, `🅿 parked at ${st.place.name} · kerb clear`);
   }
@@ -365,7 +371,7 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
     const sh = snapRoad(start).h;
     const ag = {
       id, name, type, T, color, main, pos: { ...start }, head: main ? { x: -1, z: 0 } : { x: (sh.B.x - sh.A.x) / sh.len, z: (sh.B.z - sh.A.z) / sh.len },
-      k: { edges: new Map(), lm: new Map(), spots: new Map() }, kv: 0, runs: [], log: [], state: 'park', dwell: main ? 4 : Math.random() * 20,
+      k: { edges: new Map(), lm: new Map(), spots: new Map(), visits: new Map() }, kv: 0, runs: [], log: [], state: 'park', dwell: main ? 4 : Math.random() * 20,
       run: null, leg: null, curEdge: sh.id, obsAcc: 0, blockT: 0, ignoreT: 0, moved: 0,
     };
     const g = new THREE.Group();
@@ -417,6 +423,7 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
 
   // ----- stepping -----
   function step(ag, dt) {
+    ag.clock = (ag.clock || 0) + dt;
     if (ag.state === 'park' || ag.state === 'stuck') {
       ag.dwell -= dt;
       if (ag.dwell <= 0) { if (!ag.run) newRun(ag); else afterDwell(ag); }
@@ -463,13 +470,23 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
       acc += sl;
     }
     ag.moved += ds;
+    ag.edgeD = (ag.edgeD || 0) + ds;
     ag.sinceObs = (ag.sinceObs || 0) + ds;
     if (ag.sinceObs > 6) { ag.sinceObs = 0; observe(ag); if (ag.leg !== L) return; } // look at least every 6 m, whatever the sim speed
     if (ag.moved > 4) { ag.moved = 0; ag.run.trail.push({ ...ag.pos }); }
     const ce = snapRoad(ag.pos).h.id;
     if (ce !== ag.curEdge) {
       const prev = ag.k.edges.get(ag.curEdge);
-      if (prev) prev.uses++;
+      if (prev) {
+        prev.uses++;
+        if (ag.edgeD > 25) { // seconds per metre on this street, smoothed over its visits
+          const pace = ((ag.clock || 0) - ag.edgeT0) / ag.edgeD;
+          prev.pace = prev.pace ? prev.pace * 0.6 + pace * 0.4 : pace;
+          if (prev.pace * ag.T.speed > 2.4 && !prev.slowNoted) { prev.slowNoted = true; note(ag, `🐢 slow street: ${label(HBY.get(ag.curEdge))}`); }
+        }
+      }
+      ag.edgeT0 = ag.clock || 0;
+      ag.edgeD = 0;
       edgeUse.set(ag.curEdge, (edgeUse.get(ag.curEdge) || 0) + 1);
       ag.curEdge = ce;
     }
@@ -505,7 +522,7 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
     m.renderOrder = 5;
     return m;
   }
-  const runColor = (i, n) => new THREE.Color().setHSL((n <= 1 ? 1 : i / (n - 1)) * 0.33, 0.85, 0.5); // red (first) → green (latest)
+  const runColor = (i, n) => new THREE.Color().setHSL((n <= 1 ? 0 : i / (n - 1)) * 0.33, 0.85, 0.48); // red (oldest) → green (latest)
   function rebuildOverlay() {
     overlay.children.forEach((c) => { c.geometry?.dispose(); c.material?.map?.dispose(); c.material?.dispose(); });
     overlay.clear();
@@ -530,23 +547,38 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
         void pid;
       }
     }
-    const runTag = (r, color) => {
-      const p = r.trail[Math.floor(r.trail.length * (color === 'first' ? 0.3 : 0.6))] || r.trail[0];
-      const t = textSprite(`Run ${r.n} · ${(r.time / 60).toFixed(1)} min · ${Math.round(r.dist)} m`, { color: '#fff', bg: color === 'first' ? '#d62d20' : '#1a9850', size: 0.022 });
+    // Runs that drove the same streets would hide each other, so each one is drawn
+    // offset sideways (like lines on a transit map): the current run in the middle, older runs further out.
+    const shift = (pts, off) => pts.map((p, i) => {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+      const L = Math.hypot(b.x - a.x, b.z - a.z) || 1;
+      return { x: p.x - ((b.z - a.z) / L) * off, z: p.z + ((b.x - a.x) / L) * off };
+    });
+    const tag = (pts, frac, text, bg, size = 0.022) => {
+      const p = pts[Math.floor((pts.length - 1) * frac)] || pts[0];
+      if (!p) return;
+      const t = textSprite(text, { color: '#fff', bg, size });
       t.position.set(p.x, 7, p.z);
       overlay.add(t);
     };
+    const runText = (r) => `Run ${r.n} · ${(r.time / 60).toFixed(1)} min · ${Math.round(r.dist)} m`;
     if (view.compare && ag.runs.length) {
       // only the first and the latest run: where the agent went before and after learning
       const first = ag.runs[0], last = ag.runs[ag.runs.length - 1];
-      overlay.add(strip(first.trail, 0xd62d20, 3.4, 0.75, 0.9));
-      runTag(first, 'first');
-      if (last !== first) { overlay.add(strip(last.trail, 0x1a9850, 1.8, 0.95, 0.95)); runTag(last, 'last'); }
+      const fp = shift(first.trail, 2.6);
+      overlay.add(strip(fp, 0xd62d20, 2.2, 0.75, 0.9));
+      tag(fp, 0.3, runText(first), '#d62d20');
+      if (last !== first) { const lp = shift(last.trail, -2.6); overlay.add(strip(lp, 0x1a9850, 1.8, 0.95, 0.95)); tag(lp, 0.6, `Latest · ${runText(last)}`, '#1a9850'); }
     } else if (view.paths) {
-      const runs = ag.runs.slice(-10);
-      if (ag.runs.length) { runTag(ag.runs[0], 'first'); if (ag.runs.length > 1) runTag(ag.runs[ag.runs.length - 1], 'last'); }
-      runs.forEach((r, i) => overlay.add(strip(r.trail, runColor(i, runs.length), i === runs.length - 1 ? 2.2 : 1.4, 0.7 + i * 0.03, 0.85)));
-      if (ag.run?.trail.length > 1) overlay.add(strip([...ag.run.trail, ag.pos], new THREE.Color(ag.main ? '#ffc400' : ag.color), 1.6, 1.05, 0.95));
+      const runs = ag.runs.slice(-8);
+      const N = runs.length;
+      runs.forEach((r, i) => {
+        const pts = shift(r.trail, -(N - i) * 2.6);
+        const col = runColor(i, N);
+        overlay.add(strip(pts, col, i === N - 1 ? 1.5 : 1.1, 0.7 + i * 0.03, 0.9));
+        tag(pts, 0.1 + (0.8 * i) / Math.max(1, N), i === N - 1 ? `Previous · ${runText(r)}` : `Run ${r.n} · ${(r.time / 60).toFixed(1)} min`, `#${col.getHexString()}`, i === N - 1 ? 0.022 : 0.018);
+      });
+      if (ag.run?.trail.length > 1) overlay.add(strip([...ag.run.trail, ag.pos], new THREE.Color(ag.main ? '#ffc400' : ag.color), 1.4, 1.05, 0.95));
       if (ag.leg) overlay.add(strip(ag.leg.points.slice(), 0xffffff, 0.35, 1.1, 0.7));
     }
     if (view.heat) {
@@ -583,7 +615,8 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
     const html = `<div class="fd-ag-row"><b>Agents</b><button data-ag="-">−</button><span>${fleetN + 1}</span><button data-ag="+">+</button>
       ${[['cones', '👁 Cone'], ['mind', '🧠 Map'], ['paths', '〰 Paths'], ['compare', '⇄ Run 1 vs latest'], ['heat', '🔥 All']].map(([k, t]) => `<button data-agv="${k}" class="${view[k] ? 'on' : ''}">${t}</button>`).join('')}
       <button data-ag="kai">★ Kai</button></div>
-      ${first !== null ? `<div class="fd-ag-sub">Efficiency · first run ${first}% → latest ${last}%</div>` : ''}`;
+      ${(() => { const k = agents.find((a) => a.main); const t = oldVsNew(k); return t ? `<div class="fd-ag-time">★ Kai · ${t}</div>` : ''; })()}
+      ${first !== null ? `<div class="fd-ag-sub">All agents · first run ${first}% of ideal → latest ${last}%</div>` : ''}`;
     if (barEl.dataset.html !== html) { barEl.innerHTML = html; barEl.dataset.html = html; }
   }
   barEl?.addEventListener('click', (e) => {
@@ -596,6 +629,15 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
     renderBar(true);
   });
   const avg = (a) => a.reduce((s, x) => s + x, 0) / (a.length || 1);
+  // First run vs the latest finished run: time and distance, and how much faster it got.
+  function oldVsNew(ag) {
+    if (!ag || !ag.runs.length) return null;
+    const a = ag.runs[0], b = ag.runs[ag.runs.length - 1];
+    const m = (t) => `${(t / 60).toFixed(1)} min`;
+    if (a === b) return `Run 1: ${m(a.time)} · ${Math.round(a.dist)} m · learning…`;
+    const pct = Math.round((100 * (a.time - b.time)) / a.time);
+    return `Run 1: ${m(a.time)} → run ${b.n}: ${m(b.time)} · ${pct >= 0 ? `${pct}% faster` : `${-pct}% slower`}`;
+  }
 
   function whereByLandmark(ag) {
     let best = null;
@@ -638,7 +680,7 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
         <div><small>Streets known</small>${known.length}/${H.length} · ${known.filter((s) => s.state === 'closed').length} ⛔ · ${known.filter((s) => s.state === 'none').length} ✕</div>
         <div><small>Landmarks</small>${[...ag.k.lm.keys()].map((k) => placeById.get(k)).filter((L) => L && L.cat !== 'home').map((L) => L.icon).join(' ') || '—'}</div>
       </div>
-      <h4>LEARNING · TIME PER RUN</h4>${chart(ag)}
+      <h4>LEARNING · TIME PER RUN</h4>${oldVsNew(ag) ? `<div class="fd-ag-time">${oldVsNew(ag)}</div>` : ''}${chart(ag)}
       ${last ? `<div class="fd-note">Run ${last.n}: ${fmtMin(last.time)} · ${Math.round(last.dist)} m · ${last.replans} re-plans · ${Math.round(100 * last.eff)}% of ideal</div>` : ''}
       <h4>RECENT</h4>${ag.log.slice(0, 4).map((l) => `<div class="fd-ev">${esc(l.msg)}</div>`).join('') || '<div class="fd-note">—</div>'}`;
   }

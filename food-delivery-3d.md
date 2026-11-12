@@ -157,6 +157,7 @@ Drag to orbit, right-drag to pan, scroll to zoom. Click an object to inspect it,
 #fd3d .fd-ag-row span { min-width: 18px; text-align: center; font-weight: 700; }
 #fd3d .fd-ag-row button { padding: 4px 7px; }
 #fd3d .fd-ag-row button.on { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
+#fd3d .fd-ag-time { font-size: 12px; font-weight: 700; color: #fff; background: #1a9850; border-radius: 6px; padding: 4px 8px; margin: 4px 0; }
 #fd3d .fd-ag-sub { font-size: 11px; color: #555; margin: 2px 2px 0; }
 #fd3d .fd-ag-goal { font-weight: 700; margin: 2px 0 6px; }
 #fd3d .fd-ag-stops { font-size: 11.5px; display: flex; flex-wrap: wrap; gap: 3px; align-items: center; color: #888; }
