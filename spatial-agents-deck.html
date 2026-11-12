@@ -1,0 +1,144 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spatial Agents</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#2B2F35}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:24px}
+.frame{width:min(1280px,100%);aspect-ratio:16/9;position:relative;overflow:hidden;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+.scale{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0}
+section{width:1920px;height:1080px;overflow:hidden;position:relative}
+a{color:inherit}ol{padding-left:1.2em}
+</style></head><body>
+<div class="frame"><div class="scale"><section id="cover" style="background:#F5F3EE;color:#17191C;font-family:'Public Sans', Arial, sans-serif;padding:96px 112px;display:grid;grid-template-columns:720px 1fr;gap:64px;align-items:center">
+<div style="display:flex;flex-direction:column;gap:28px">
+<p style="font-size:26px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#4A4F57">Spatial AI + Computing · Columbia GSAPP</p>
+<h1 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:96px;font-weight:700;line-height:1.05;background:#F6C90E;padding:8px 20px;border-radius:6px">Spatial Agents</h1>
+<p style="font-size:36px;line-height:1.35;color:#2B2F35">A delivery rider who learns Morningside Heights by riding it</p>
+<div style="display:flex;flex-direction:column;gap:10px">
+<p style="font-size:32px;font-weight:700">Justin &amp; Ishika</p>
+<p style="font-size:26px;line-height:1.4;color:#1D4ED8"><a href="https://ishika100603.github.io/Spatial_ai/food-delivery-3d.html">Simulation: ishika100603.github.io/<br>Spatial_ai/food-delivery-3d.html</a></p>
+</div>
+</div>
+<img src="deck-img/agents-cover.jpg" alt="The main agent Kai, gold label, riding among other courier agents with their cones of vision near Columbia University" style="width:900px;height:540px;object-fit:cover;border-radius:16px;border:1px solid #D9D5CC">
+
+</section>
+</div></div>
+<div class="frame"><div class="scale"><section id="kai" data-transition="fade" style="background:#F5F3EE;color:#17191C;font-family:'Public Sans', Arial, sans-serif;padding:112px 128px;display:grid;grid-template-columns:600px 1fr;gap:56px;align-items:center">
+<div style="display:flex;flex-direction:column;gap:24px">
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1">Kai’s first run</h2>
+<div style="display:flex;flex-direction:column;gap:14px">
+<p style="font-size:28px;line-height:1.4"><span style="color:#B7791F"><b>GOAL</b></span> · Ana’s home, with Priya’s delivery on the way, then back to Wok on Wheels</p>
+<p style="font-size:28px;line-height:1.4"><span style="color:#4A4F57"><b>START</b></span> · knows only what it can see from the truck. No route is given</p>
+<p style="font-size:28px;line-height:1.4"><span style="color:#DC2626"><b>DEAD END</b></span> · tries W 116th St: College Walk, no road</p>
+<p style="font-size:28px;line-height:1.4"><span style="color:#0369A1"><b>RE-PLAN</b></span> · on its own map, by W 114th St</p>
+</div>
+<p style="font-size:26px;line-height:1.4;color:#4A4F57">It also picks the order of the two deliveries itself.</p>
+</div>
+<img src="deck-gifs/agents-kai.gif" alt="Following Kai from Wok on Wheels: it tries W 116th St, finds no road, re-plans and reaches Priya’s and Ana’s homes" style="width:1008px;height:605px;object-fit:contain;background:#17191C;border-radius:16px">
+
+</section>
+</div></div>
+<div class="frame"><div class="scale"><section id="cone" data-transition="fade" style="background:#F5F3EE;color:#17191C;font-family:'Public Sans', Arial, sans-serif;padding:112px 128px;display:grid;grid-template-columns:600px 1fr;gap:56px;align-items:center">
+<div style="display:flex;flex-direction:column;gap:24px">
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1">Cone of vision</h2>
+<div style="display:flex;flex-direction:column;gap:14px">
+<p style="font-size:28px;line-height:1.4"><span style="color:#B7791F"><b>MOTORBIKE</b></span> · 60 m · 60°</p>
+<p style="font-size:28px;line-height:1.4"><span style="color:#0369A1"><b>CAR</b></span> · 45 m · 90°</p>
+<p style="font-size:28px;line-height:1.4"><span style="color:#16A34A"><b>E-BIKE</b></span> · 35 m · 120°</p>
+</div>
+<p style="font-size:28px;line-height:1.4">Buildings block it. Through it an agent finds closures, dead ends, one-way signs, landmarks and free kerb space.</p>
+</div>
+<img src="deck-gifs/agents-cone.gif" alt="Close-up of Kai parked at the kerb on W 113th St with its yellow cone of vision on the street" style="width:1008px;height:605px;object-fit:contain;background:#17191C;border-radius:16px">
+
+</section>
+</div></div>
+<div class="frame"><div class="scale"><section id="map" data-transition="fade" style="background:#F5F3EE;color:#17191C;font-family:'Public Sans', Arial, sans-serif;padding:112px 128px;display:grid;grid-template-columns:600px 1fr;gap:56px;align-items:center">
+<div style="display:flex;flex-direction:column;gap:24px">
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1">What Kai knows</h2>
+<div style="display:flex;flex-direction:column;gap:14px">
+<p style="font-size:28px;line-height:1.4"><span style="color:#16A34A"><b>GREEN</b></span> · streets it has seen</p>
+<p style="font-size:28px;line-height:1.4"><span style="color:#DC2626"><b>⛔ / ✕</b></span> · closures and streets with no road</p>
+<p style="font-size:28px;line-height:1.4"><span style="color:#1D4ED8"><b>P</b></span> · kerb spots it parked in</p>
+<p style="font-size:28px;line-height:1.4"><span style="color:#B7791F"><b>LANDMARKS</b></span> · restaurants, churches, schools, the park</p>
+</div>
+<p style="font-size:26px;line-height:1.4;color:#4A4F57">Its position is told by its own landmarks: “78 m S of the Church of Notre Dame”.</p>
+</div>
+<img src="deck-img/agents-map.jpg" alt="Top view of the site with Kai’s known streets in green, crosses on the campus streets and its landmark list in the side card" style="width:1008px;height:605px;object-fit:contain;background:#17191C;border-radius:16px">
+
+</section>
+</div></div>
+<div class="frame"><div class="scale"><section id="compare" data-transition="fade" style="background:#F5F3EE;color:#17191C;font-family:'Public Sans', Arial, sans-serif;padding:112px 128px;display:grid;grid-template-columns:600px 1fr;gap:56px;align-items:center">
+<div style="display:flex;flex-direction:column;gap:24px">
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1">Run 1 vs run 5</h2>
+<div style="display:flex;flex-direction:column;gap:14px">
+<p style="font-size:28px;line-height:1.4"><span style="color:#DC2626"><b>RUN 1</b></span> · 7.8 min · 1,686 m. Detours up Broadway to the campus streets</p>
+<p style="font-size:28px;line-height:1.4"><span style="color:#16A34A"><b>RUN 5</b></span> · 5.8 min · 1,527 m. Straight along W 114th St, no re-plans</p>
+</div>
+<p style="font-size:28px;line-height:1.4">It now skips the dead ends, finds doors without searching and parks in spots it remembers.</p>
+</div>
+<img src="deck-img/agents-compare.jpg" alt="Top view with Kai’s first run drawn thick in red and its fifth run in green, each labelled with minutes and metres" style="width:1008px;height:605px;object-fit:contain;background:#17191C;border-radius:16px">
+
+</section>
+</div></div>
+<div class="frame"><div class="scale"><section id="paths" data-transition="fade" style="background:#F5F3EE;color:#17191C;font-family:'Public Sans', Arial, sans-serif;padding:112px 128px;display:grid;grid-template-columns:600px 1fr;gap:56px;align-items:center">
+<div style="display:flex;flex-direction:column;gap:24px">
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1">Every run, red to green</h2>
+<div style="display:flex;flex-direction:column;gap:14px">
+<p style="font-size:28px;line-height:1.4"><span style="color:#B7791F"><b>PATHS</b></span> · all of Kai’s runs, oldest red, newest green</p>
+<p style="font-size:28px;line-height:1.4"><span style="color:#4A4F57"><b>CHART</b></span> · minutes per run: 7.8, 7.0, 5.8, 7.0, 5.8</p>
+</div>
+<p style="font-size:26px;line-height:1.4;color:#4A4F57">Run 4 took the same route as run 3; the extra time is traffic.</p>
+</div>
+<img src="deck-img/agents-learning.jpg" alt="Top view of all five of Kai’s runs as overlapping coloured lines, with the minutes-per-run bar chart in the side card" style="width:1008px;height:605px;object-fit:contain;background:#17191C;border-radius:16px">
+
+</section>
+</div></div>
+<div class="frame"><div class="scale"><section id="behaviour" data-transition="fade" style="background:#F5F3EE;color:#17191C;font-family:'Public Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:48px">
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1">Among other agents</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:40px">
+<div style="background:#FBFAF7;border-radius:16px;padding:40px;display:flex;flex-direction:column;gap:20px">
+<p style="font-size:26px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4A4F57">On the move</p>
+<p style="font-size:30px;line-height:1.4">Keeps a gap behind agents and cars in its lane</p>
+<p style="font-size:30px;line-height:1.4">Waits for people crossing ahead</p>
+<p style="font-size:30px;line-height:1.4">Stops at red lights</p>
+</div>
+<div style="background:#FBFAF7;border-radius:16px;padding:40px;display:flex;flex-direction:column;gap:20px">
+<p style="font-size:26px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4A4F57">Parking</p>
+<p style="font-size:30px;line-height:1.4">At the kerb, at least 16 m from a crossing</p>
+<p style="font-size:30px;line-height:1.4">Never in a doorway</p>
+<p style="font-size:30px;line-height:1.4">Never against another parked agent</p>
+</div>
+</div>
+
+</section>
+</div></div>
+<div class="frame"><div class="scale"><section id="fleet" data-transition="fade" style="background:#F5F3EE;color:#17191C;font-family:'Public Sans', Arial, sans-serif;padding:112px 128px;display:grid;grid-template-columns:600px 1fr;gap:56px;align-items:center">
+<div style="display:flex;flex-direction:column;gap:24px">
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1">31 agents at once</h2>
+<div style="display:flex;flex-direction:column;gap:14px">
+<p style="font-size:28px;line-height:1.4"><span style="color:#C2410C"><b>STREET HEAT</b></span> · the streets all agents use most, thick and orange</p>
+<p style="font-size:28px;line-height:1.4"><span style="color:#C2410C"><b>LANDMARK RINGS</b></span> · how many agents know each landmark</p>
+</div>
+<p style="font-size:26px;line-height:1.4;color:#4A4F57">Each courier carries two orders a run and learns on its own, like Kai.</p>
+</div>
+<img src="deck-gifs/agents-fleet.gif" alt="Top view of 31 agents with their cones, orange street-use heat along W 114th St and Amsterdam Ave, and rings at landmarks" style="width:1008px;height:605px;object-fit:contain;background:#17191C;border-radius:16px">
+
+</section>
+</div></div>
+<div class="frame"><div class="scale"><section id="links" data-transition="fade" style="background:#F6C90E;color:#17191C;font-family:'Public Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;justify-content:center;gap:40px">
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:88px;font-weight:700;line-height:1.05">Try it</h2>
+<p style="font-size:40px;font-weight:700;line-height:1.3"><a href="https://ishika100603.github.io/Spatial_ai/food-delivery-3d.html">ishika100603.github.io/Spatial_ai/food-delivery-3d.html</a></p>
+<ol style="font-size:32px;line-height:1.5">
+<li>Press <b>★ Kai</b> to follow the main agent, and set speed to ×30.</li>
+<li>After a few runs, press <b>⇄ Run 1 vs latest</b>.</li>
+<li>Press <b>＋</b> for more agents and <b>🔥 All</b> for the shared view.</li>
+</ol>
+<p style="font-size:28px;color:#2B2F35">Justin &amp; Ishika · Spatial AI + Computing · Columbia GSAPP</p>
+
+</section>
+</div></div>
+<script>
+function fit(){document.querySelectorAll('.frame').forEach(f=>{f.firstElementChild.style.transform='scale('+(f.clientWidth/1920)+')';});}
+addEventListener('resize',fit);fit();
+</script></body></html>
