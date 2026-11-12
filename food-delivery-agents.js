@@ -463,6 +463,8 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
       acc += sl;
     }
     ag.moved += ds;
+    ag.sinceObs = (ag.sinceObs || 0) + ds;
+    if (ag.sinceObs > 6) { ag.sinceObs = 0; observe(ag); if (ag.leg !== L) return; } // look at least every 6 m, whatever the sim speed
     if (ag.moved > 4) { ag.moved = 0; ag.run.trail.push({ ...ag.pos }); }
     const ce = snapRoad(ag.pos).h.id;
     if (ce !== ag.curEdge) {
@@ -537,14 +539,14 @@ export function createAgents({ scene, city, camera, riderMesh, lanePath, barEl, 
     if (view.compare && ag.runs.length) {
       // only the first and the latest run: where the agent went before and after learning
       const first = ag.runs[0], last = ag.runs[ag.runs.length - 1];
-      overlay.add(strip(first.trail, 0xd62d20, 1.6, 0.75, 0.9));
+      overlay.add(strip(first.trail, 0xd62d20, 3.4, 0.75, 0.9));
       runTag(first, 'first');
-      if (last !== first) { overlay.add(strip(last.trail, 0x1a9850, 0.8, 0.95, 0.95)); runTag(last, 'last'); }
+      if (last !== first) { overlay.add(strip(last.trail, 0x1a9850, 1.8, 0.95, 0.95)); runTag(last, 'last'); }
     } else if (view.paths) {
       const runs = ag.runs.slice(-10);
       if (ag.runs.length) { runTag(ag.runs[0], 'first'); if (ag.runs.length > 1) runTag(ag.runs[ag.runs.length - 1], 'last'); }
-      runs.forEach((r, i) => overlay.add(strip(r.trail, runColor(i, runs.length), i === runs.length - 1 ? 1.1 : 0.7, 0.7 + i * 0.03, 0.85)));
-      if (ag.run?.trail.length > 1) overlay.add(strip([...ag.run.trail, ag.pos], new THREE.Color(ag.main ? '#ffc400' : ag.color), 0.9, 1.05, 0.95));
+      runs.forEach((r, i) => overlay.add(strip(r.trail, runColor(i, runs.length), i === runs.length - 1 ? 2.2 : 1.4, 0.7 + i * 0.03, 0.85)));
+      if (ag.run?.trail.length > 1) overlay.add(strip([...ag.run.trail, ag.pos], new THREE.Color(ag.main ? '#ffc400' : ag.color), 1.6, 1.05, 0.95));
       if (ag.leg) overlay.add(strip(ag.leg.points.slice(), 0xffffff, 0.35, 1.1, 0.7));
     }
     if (view.heat) {
