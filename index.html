@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catan Geography Lab</title>
+<style>
+:root{
+  --bg:#f5f3ee; --panel:#fff; --ink:#1f2430; --muted:#6b7280; --line:#e3e0d8;
+  --accent:#b4532a; --accent2:#2f6f8f; --good:#2e7d4f; --bad:#b42a2a;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:16px 20px 8px}
+h1{margin:0;font-size:22px}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);margin-top:2px}
+.flow{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.flow b{background:var(--ink);color:#fff;border-radius:12px;padding:2px 10px;font-size:12px;font-weight:600}
+.wrap{display:grid;grid-template-columns:300px 1fr;gap:14px;padding:8px 20px 20px}
+@media (max-width:980px){.wrap{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;margin:0 0 8px;color:var(--accent)}
+.card h2 .n{display:inline-block;background:var(--accent);color:#fff;border-radius:50%;width:18px;height:18px;text-align:center;line-height:18px;margin-right:6px;font-size:11px}
+label.row{display:grid;grid-template-columns:1fr 90px 34px;align-items:center;gap:6px;margin:5px 0;font-size:13px}
+label.row output{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+input[type=range]{width:100%}
+select,button{font:inherit}
+button{background:var(--ink);color:#fff;border:0;border-radius:7px;padding:7px 12px;cursor:pointer}
+button.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
+button.acc{background:var(--accent)}
+button:disabled{opacity:.5;cursor:default}
+.goals{display:grid;gap:6px}
+.goal{border:1px solid var(--line);border-radius:8px;padding:7px 9px;cursor:pointer;display:block}
+.goal input{margin-right:6px}
+.goal.on{border-color:var(--accent);background:#fbf1ec}
+.goal small{display:block;color:var(--muted);margin-left:22px}
+.hint{color:var(--muted);font-size:12px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.worlds{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:760px){.worlds{grid-template-columns:1fr}}
+.world{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px}
+.world h3{margin:0 0 4px;font-size:15px;display:flex;justify-content:space-between;align-items:center}
+.world canvas{width:100%;height:auto;display:block;border-radius:8px;background:#2b5f80}
+.stats{font-size:12px;color:var(--muted);margin:6px 0}
+.bars{display:grid;gap:4px;margin:6px 0}
+.bar{display:grid;grid-template-columns:110px 1fr 70px;gap:6px;align-items:center;font-size:12px}
+.bar .track{background:#eee;border-radius:4px;height:10px;overflow:hidden}
+.bar .fill{height:100%}
+.bar .st{grid-column:1/-1;color:var(--muted);font-size:11px;margin-top:-3px;padding-left:4px}
+.verdict{font-weight:600;font-size:13px;min-height:20px}
+.tabs{display:flex;gap:4px;margin-top:14px}
+.tabs button{background:#fff;color:var(--ink);border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0}
+.tabs button.on{background:var(--panel);color:var(--accent);font-weight:600}
+.tabpanel{background:var(--panel);border:1px solid var(--line);border-radius:0 10px 10px 10px;padding:14px}
+.tabpanel[hidden]{display:none}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left}
+th{color:var(--muted);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:12px;color:var(--muted)}
+.sw{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+#tip{position:fixed;pointer-events:none;background:#1f2430;color:#fff;font-size:12px;padding:6px 8px;border-radius:6px;display:none;max-width:280px;z-index:5;line-height:1.35}
+.conclusion{background:#f1f6f9;border-left:4px solid var(--accent2);padding:8px 10px;margin-top:10px;border-radius:4px}
+.inline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+.inline input[type=number]{width:70px}
+canvas#evoChart{width:100%;height:160px;border:1px solid var(--line);border-radius:6px;background:#fff}
+</style>
+</head>
+<body>
+<header>
+  <h1>CATAN: <span>The Geography of Competition</span></h1>
+  <div class="sub">Change the geography, keep the agents, and test how terrain, resources and connectivity decide who wins.</div>
+  <div class="flow"><b>1 · Pick a goal</b><b>2 · Set the conditions</b><b>3 · Run worlds A vs B</b><b>4 · Test a hypothesis or auto‑evolve</b></div>
+</header>
+
+<div class="wrap">
+<aside>
+  <div class="card">
+    <h2><span class="n">1</span>Goal the agents compete for</h2>
+    <div class="goals" id="goals">
+      <label class="goal on"><input type="radio" name="goal" value="race" checked>Race to victory points
+        <small>Build settlements (1 VP) and cities (+1 VP). First to the target wins.</small></label>
+      <label class="goal"><input type="radio" name="goal" value="territory">Claim territory
+        <small>Each settlement claims its hex and free neighbours. Most hexes wins.</small></label>
+      <label class="goal"><input type="radio" name="goal" value="balanced">Balanced economy
+        <small>Collect at least N of every resource. Scored by your weakest resource.</small></label>
+    </div>
+    <label class="row" style="margin-top:8px"><span id="targetLbl">Target VP</span><input type="range" id="target" min="3" max="10" value="6"><output id="targetOut">6</output></label>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">2</span>Conditions — the island</h2>
+    <label class="row">Water / fragmentation<input type="range" id="water" min="0" max="60" value="25"><output></output></label>
+    <label class="row">Desert (hindrance)<input type="range" id="desert" min="0" max="40" value="8"><output></output></label>
+    <label class="row">Resource richness<input type="range" id="richness" min="0" max="100" value="30"><output></output></label>
+    <label class="row">Terrain clustering<input type="range" id="clustering" min="0" max="90" value="40"><output></output></label>
+    <label class="row">Robber (dynamic)<input type="checkbox" id="robber" checked style="justify-self:start"><output></output></label>
+    <div class="hint">Values are %. Water tiles are <b>obstacles</b>; desert &amp; mountains are <b>hindrances</b> (slow to cross); roads that form on busy routes are <b>affordances</b>.</div>
+  </div>
+
+  <div class="card">
+    <h2>Agents (kept constant)</h2>
+    <label class="row">▲ Explorers<input type="range" id="nExplorer" min="0" max="3" value="1"><output></output></label>
+    <label class="row">● Planners<input type="range" id="nPlanner" min="0" max="3" value="1"><output></output></label>
+    <label class="row">■ Rushers<input type="range" id="nRusher" min="0" max="3" value="1"><output></output></label>
+    <label class="row">Extra vision<input type="range" id="vision" min="0" max="2" value="0"><output></output></label>
+    <div class="hint">
+      <b>Explorer</b> sees 2 hexes, scouts widely, commits only to great sites.<br>
+      <b>Planner</b> sees 1 hex, remembers good sites (landmarks) and plans weighted shortest paths to them ahead of time.<br>
+      <b>Rusher</b> sees 1 hex, settles at the first acceptable site.
+    </div>
+  </div>
+</aside>
+
+<main>
+  <div class="toolbar">
+    <button class="acc" id="btnGen">⟳ Generate two new worlds</button>
+    <button id="btnRun">▶ Run</button>
+    <button class="sec" id="btnStep">Step</button>
+    <button class="sec" id="btnRestart">Replay same worlds</button>
+    <label class="hint">Speed <input type="range" id="speed" min="1" max="30" value="4" style="width:90px;vertical-align:middle"></label>
+    <label class="hint">View as <select id="viewAs"><option value="-1">God view (everything)</option></select></label>
+  </div>
+
+  <div class="worlds">
+    <div class="world" id="wA">
+      <h3><span>World A <small class="hint" data-id></small></span><button class="sec" data-choose="A">Keep A → make 2 variations</button></h3>
+      <canvas width="520" height="470"></canvas>
+      <div class="stats"></div><div class="verdict"></div><div class="bars"></div>
+    </div>
+    <div class="world" id="wB">
+      <h3><span>World B <small class="hint" data-id></small></span><button class="sec" data-choose="B">Keep B → make 2 variations</button></h3>
+      <canvas width="520" height="470"></canvas>
+      <div class="stats"></div><div class="verdict"></div><div class="bars"></div>
+    </div>
+  </div>
+
+  <div class="legend" style="margin-top:8px" id="legend"></div>
+
+  <div class="tabs">
+    <button class="on" data-tab="results">Run history</button>
+    <button data-tab="test">Test a hypothesis</button>
+    <button data-tab="evolve">Auto‑evolve</button>
+  </div>
+  <div class="tabpanel" id="tab-results">
+    <div class="hint">Every finished run is logged here so you can compare worlds against the chosen goal.</div>
+    <table><thead><tr><th>World</th><th>Goal</th><th>Water</th><th>Desert</th><th>Avg pips</th><th>Ticks</th><th>Winner</th><th>Fairness</th></tr></thead><tbody id="hist"></tbody></table>
+  </div>
+  <div class="tabpanel" id="tab-test" hidden>
+    <div><b>Does one condition change the outcome?</b> Everything else stays as set on the left; only this variable changes. Each trial uses a fresh random island.</div>
+    <div class="inline">
+      Vary <select id="xVar">
+        <option value="water">Water / fragmentation %</option>
+        <option value="desert">Desert %</option>
+        <option value="richness">Resource richness %</option>
+        <option value="clustering">Terrain clustering %</option>
+        <option value="vision">Extra vision</option>
+        <option value="robber">Robber (0 = off, 1 = on)</option>
+      </select>
+      from <input type="number" id="xA" value="10"> to <input type="number" id="xB" value="50">
+      trials <input type="number" id="xN" value="20" min="2" max="100">
+      <button class="acc" id="btnTest">Run experiment</button>
+    </div>
+    <div id="testOut" class="hint">Example: “More water makes the island fragmented — do Explorers benefit?” Set water 10 → 50 and run.</div>
+  </div>
+  <div class="tabpanel" id="tab-evolve" hidden>
+    <div><b>Let the computer design the island.</b> Each epoch mutates the best world so far, simulates it 3 times with the current goal and agents, and keeps the change if the score improves.</div>
+    <div class="inline">
+      Design objective <select id="evoObj">
+        <option value="fair">Fair competition (everyone scores similarly)</option>
+        <option value="fast">Fast game (goal reached quickly)</option>
+        <option value="slow">Hard island (goal reached slowly)</option>
+        <option value="explorer">Explorers dominate</option>
+        <option value="planner">Planners dominate</option>
+        <option value="rusher">Rushers dominate</option>
+      </select>
+      epochs <input type="number" id="evoN" value="30" min="1" max="300">
+      <button class="acc" id="btnEvo">Evolve from World A</button>
+    </div>
+    <canvas id="evoChart" width="900" height="160"></canvas>
+    <div id="evoOut" class="hint">The best island is loaded into World A when done; World B shows the starting island for comparison.</div>
+  </div>
+</main>
+</div>
+<div id="tip"></div>
+
+<script>
+// ===================== Core model =====================
+const TERR = {
+  water:     {c:'#3f7fa8', cost:Infinity, res:null,    name:'Water (obstacle)'},
+  fields:    {c:'#e9c95b', cost:1, res:'wheat', name:'Fields → wheat'},
+  pasture:   {c:'#a2d16f', cost:1, res:'sheep', name:'Pasture → sheep'},
+  forest:    {c:'#2f7d3b', cost:2, res:'wood',  name:'Forest → wood'},
+  hills:     {c:'#c8693b', cost:2, res:'brick', name:'Hills → brick'},
+  mountains: {c:'#8b8b8b', cost:3, res:'ore',   name:'Mountains → ore (slow)'},
+  desert:    {c:'#e6d7ab', cost:4, res:null,    name:'Desert (hindrance)'},
+};
+const RES = ['wood','brick','wheat','sheep','ore'];
+const LAND = ['forest','hills','fields','pasture','mountains'];
+const SETTLE = {wood:1,brick:1,wheat:1,sheep:1};
+const CITY = {wheat:2,ore:3};
+const R = 5, MAX_TICKS = 400;
+const DIRS = [[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]];
+const DIR_NAMES = ['E','NE','NW','W','SW','SE'];
+const COLORS = ['#d7263d','#1b98e0','#f49d37','#7b2cbf','#ffffff','#111111','#2ec4b6','#ff70a6','#c5d86d'];
+const TYPES = {
+  explorer:{name:'Explorer', vision:2, threshold:13, shape:'tri'},
+  planner: {name:'Planner',  vision:1, threshold:9,  shape:'circle'},
+  rusher:  {name:'Rusher',   vision:1, threshold:3,  shape:'square'},
+};
+const key = (q,r) => q+','+r;
+const hexDist = (a,b) => (Math.abs(a.q-b.q)+Math.abs(a.r-b.r)+Math.abs(a.q+a.r-b.q-b.r))/2;
+const pips = n => n ? 6-Math.abs(7-n) : 0;
+function rng(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+const pick = (arr,rand) => arr[Math.floor(rand()*arr.length)];
+function shuffle(a,rand){ for(let i=a.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+const NUMS = [2,3,3,4,4,5,5,6,6,8,8,9,9,10,10,11,11,12], RICH = [5,6,8,9];
+let worldCounter = 0;
+
+function readParams(){
+  const v = id => +document.getElementById(id).value;
+  return { water:v('water')/100, desert:v('desert')/100, richness:v('richness')/100, clustering:v('clustering')/100,
+           robber:document.getElementById('robber').checked, seed:Math.floor(Math.random()*1e9) };
+}
+function readCfg(){
+  const v = id => +document.getElementById(id).value;
+  return { goal:document.querySelector('input[name=goal]:checked').value, target:v('target'),
+           counts:{explorer:v('nExplorer'), planner:v('nPlanner'), rusher:v('nRusher')}, vision:v('vision') };
+}
+
+// ----- Environment generation -----
+function generateWorld(p){
+  const rand = rng(p.seed);
+  const tiles = new Map();
+  for(let q=-R;q<=R;q++) for(let r=Math.max(-R,-q-R); r<=Math.min(R,-q+R); r++) tiles.set(key(q,r),{q,r,t:'water',n:0});
+  const inner = [...tiles.values()].filter(t=>hexDist(t,{q:0,r:0})<R);
+  inner.forEach(t=>t.s = hexDist(t,{q:0,r:0})/R + (rand()-0.5)*0.9);
+  inner.sort((a,b)=>b.s-a.s);
+  const land = inner.slice(Math.round(inner.length*p.water));
+  shuffle(land,rand).forEach(t=>{ t.t='?'; });
+  for(const t of land){
+    const nb = DIRS.map(([dq,dr])=>tiles.get(key(t.q+dq,t.r+dr))).filter(n=>n && LAND.includes(n.t));
+    t.t = (nb.length && rand()<p.clustering) ? pick(nb,rand).t : pick(LAND,rand);
+  }
+  shuffle(land,rand).slice(0,Math.round(land.length*p.desert)).forEach(t=>t.t='desert');
+  for(const t of land){ t.n = t.t==='desert' ? 0 : (rand()<p.richness ? pick(RICH,rand) : pick(NUMS,rand)); delete t.s; }
+  inner.forEach(t=>delete t.s);
+  return { id:++worldCounter, parent:null, params:{...p}, tiles };
+}
+function cloneWorld(w){ const tiles=new Map(); w.tiles.forEach((t,k)=>tiles.set(k,{...t})); return {id:++worldCounter,parent:w.id,params:{...w.params},tiles}; }
+function mutateWorld(w, rand, k=6){
+  const nw = cloneWorld(w);
+  const inner = [...nw.tiles.values()].filter(t=>hexDist(t,{q:0,r:0})<R);
+  for(let i=0;i<k;i++){
+    const t = pick(inner,rand), a = rand();
+    if(a<0.3){ if(t.t==='water'){ t.t=pick(LAND,rand); t.n=pick(NUMS,rand);} else { t.t='water'; t.n=0; } }
+    else if(a<0.65){ if(t.t!=='water'){ t.t = rand()<0.15?'desert':pick(LAND,rand); t.n = t.t==='desert'?0:(t.n||pick(NUMS,rand)); } }
+    else if(t.t!=='water' && t.t!=='desert'){ t.n = pick(NUMS,rand); }
+  }
+  if(rand()<0.3) nw.params.robber = !nw.params.robber;
+  return nw;
+}
+function worldStats(w){
+  const all=[...w.tiles.values()].filter(t=>hexDist(t,{q:0,r:0})<R), land=all.filter(t=>t.t!=='water');
+  const prod = land.filter(t=>t.n);
+  return { water: 1-land.length/all.length, desert: land.filter(t=>t.t==='desert').length/Math.max(1,land.length),
+           pips: prod.reduce((s,t)=>s+pips(t.n),0)/Math.max(1,prod.length), land:land.length };
+}
+
+// ----- Simulation -----
+function createSim(world, cfg, seed){
+  const rand = rng(seed);
+  const tiles = new Map();
+  world.tiles.forEach((t,k)=>tiles.set(k,{...t,traffic:0,road:false,owner:null}));
+  const land = [...tiles.values()].filter(t=>t.t!=='water');
+  const sim = { world, cfg, tiles, land, rand, agents:[], tick:0, robber:null, settlements:new Map(), done:false, winner:null, roll:0, events:[] };
+  let id=0; const used=new Set();
+  for(const type of ['explorer','planner','rusher']) for(let i=0;i<cfg.counts[type];i++){
+    let s, tries=0; do { s = pick(land,rand); tries++; } while(used.has(key(s.q,s.r)) && tries<50);
+    used.add(key(s.q,s.r));
+    sim.agents.push({ id, type, color:COLORS[id%COLORS.length], name:`${TYPES[type].name} ${i+1}`,
+      q:s.q, r:s.r, home:{q:s.q,r:s.r}, vision:TYPES[type].vision+cfg.vision, threshold:TYPES[type].threshold,
+      known:new Set(), landmarks:new Map(), res:{wood:0,brick:0,wheat:0,sheep:0,ore:0}, collected:{wood:0,brick:0,wheat:0,sheep:0,ore:0},
+      free:2, vp:0, wait:0, path:[], target:null, steps:0, travel:0, status:'scanning', settlements:[] });
+    id++;
+  }
+  sim.agents.forEach(a=>scan(sim,a));
+  return sim;
+}
+const neighbors = (sim,t) => DIRS.map(([dq,dr])=>sim.tiles.get(key(t.q+dq,t.r+dr))).filter(Boolean);
+const moveCost = t => t.t==='water' ? Infinity : (t.road ? Math.ceil(TERR[t.t].cost/2) : TERR[t.t].cost);
+
+function scan(sim,a){ // partial observability: only tiles within vision radius are revealed
+  sim.tiles.forEach((t,k)=>{ if(hexDist(t,a)<=a.vision) a.known.add(k); });
+}
+function validSite(sim,t,a){ // a given → judged on the agent's own (possibly outdated) knowledge
+  if(t.t==='water' || t.t==='desert') return false;
+  for(const [k] of sim.settlements){
+    if(a && !a.known.has(k)) continue;
+    const s=sim.tiles.get(k); if(hexDist(s,t)<2) return false;
+  }
+  return true;
+}
+function siteValue(sim,a,t){
+  if(!validSite(sim,t,a)) return -1;
+  let pip=0, unclaimed=0; const types=new Set();
+  for(const n of [t,...neighbors(sim,t)]){
+    if(!a.known.has(key(n.q,n.r))) continue;
+    if(TERR[n.t].res && sim.robber!==key(n.q,n.r)){ pip+=pips(n.n); types.add(TERR[n.t].res); }
+    if(n.t!=='water' && n.owner===null) unclaimed++;
+  }
+  const g = sim.cfg.goal;
+  if(g==='race') return pip + types.size;
+  if(g==='territory') return unclaimed*1.6 + pip*0.4;
+  let v = pip*0.5; types.forEach(r=>{ v += 3/(1+a.collected[r]*0.3); }); return v;   // balanced: favour what you lack
+}
+function updateLandmarks(sim,a){ // spatial memory: remember the best candidate sites seen so far
+  a.landmarks.clear();
+  for(const k of a.known){ const t=sim.tiles.get(k); const v=siteValue(sim,a,t); if(v>0) a.landmarks.set(k,v); }
+}
+// Weighted shortest path (Dijkstra) over the agent's mental map. Unknown tiles are assumed passable (cost 2).
+function plan(sim,a,goalFn){
+  const start=key(a.q,a.r), dist=new Map([[start,0]]), prev=new Map(), open=[start], done=new Set();
+  while(open.length){
+    let bi=0; for(let i=1;i<open.length;i++) if(dist.get(open[i])<dist.get(open[bi])) bi=i;
+    const cur=open.splice(bi,1)[0]; if(done.has(cur)) continue; done.add(cur);
+    const ct=sim.tiles.get(cur);
+    if(cur!==start && goalFn(ct,cur)){ const path=[]; let c=cur; while(c!==start){ path.unshift(c); c=prev.get(c);} return {path,cost:dist.get(cur)}; }
+    for(const n of neighbors(sim,ct)){
+      const nk=key(n.q,n.r); if(done.has(nk)) continue;
+      const c = a.known.has(nk) ? moveCost(n) : 2;
+      if(c===Infinity) continue;
+      if(sim.agents.some(o=>o!==a && o.q===n.q && o.r===n.r) && hexDist(n,a)===1) continue; // agents consume space
+      const nd=dist.get(cur)+c;
+      if(nd < (dist.has(nk)?dist.get(nk):Infinity)){ dist.set(nk,nd); prev.set(nk,cur); open.push(nk); }
+    }
+  }
+  return null;
+}
+const afford = (a,cost) => Object.entries(cost).every(([r,n])=>a.res[r]>=n);
+const pay = (a,cost) => Object.entries(cost).forEach(([r,n])=>a.res[r]-=n);
+function bankTrade(a, cost){ // 4:1 trade toward what's missing
+  for(const [r,n] of Object.entries(cost)){
+    if(a.res[r]>=n) continue;
+    const spare = RES.find(x=>!(x in cost) ? a.res[x]>=4 : a.res[x]>=cost[x]+4);
+    if(spare){ a.res[spare]-=4; a.res[r]++; }
+  }
+}
+function build(sim,a,t){
+  const k=key(t.q,t.r);
+  sim.settlements.set(k,{owner:a.id,city:false}); a.settlements.push(k); a.vp++;
+  if(a.free>0) a.free--; else pay(a,SETTLE);
+  for(const n of [t,...neighbors(sim,t)]) if(n.t!=='water' && n.owner===null) n.owner=a.id;
+  a.target=null; a.path=[]; a.threshold=TYPES[a.type].threshold;
+  sim.events.push(`t${sim.tick}: ${a.name} settled (${t.q},${t.r})`);
+}
+function explore(sim,a){
+  const res = plan(sim,a,(t,k)=>a.known.has(k) && neighbors(sim,t).some(n=>!a.known.has(key(n.q,n.r))) && t.t!=='water');
+  if(res) a.path=res.path; else { const opts=neighbors(sim,a).filter(n=>n.t!=='water'); if(opts.length){ const o=pick(opts,sim.rand); a.path=[key(o.q,o.r)]; } }
+  a.status='exploring the frontier';
+}
+function stepAlong(sim,a){
+  if(!a.path.length) return;
+  const nk=a.path[0], n=sim.tiles.get(nk);
+  if(n.t==='water' || sim.agents.some(o=>o!==a && o.q===n.q && o.r===n.r)){ a.path=[]; return; } // blocked → replan next tick
+  a.path.shift(); a.q=n.q; a.r=n.r; a.steps++;
+  const c=moveCost(n); a.travel+=c; a.wait=c-1;            // hindrance: rough terrain costs extra ticks
+  if(++n.traffic>=5) n.road=true;                            // affordance: busy routes become roads
+}
+function act(sim,a){
+  scan(sim,a);
+  if(a.wait>0){ a.wait--; a.status='crossing rough terrain'; return; }
+  updateLandmarks(sim,a);
+  const goal=sim.cfg.goal;
+  if(goal!=='territory'){ bankTrade(a,CITY);
+    const s=a.settlements.find(k=>!sim.settlements.get(k).city);
+    if(s && afford(a,CITY) && goal==='race'){ pay(a,CITY); sim.settlements.get(s).city=true; a.vp++; a.status='upgraded to a city'; sim.events.push(`t${sim.tick}: ${a.name} built a city`); return; }
+  }
+  if(a.free===0) bankTrade(a,SETTLE);
+  const canBuild = a.free>0 || afford(a,SETTLE);
+  // choose best remembered site, discounted by distance (plan ahead)
+  let best=null, bestV=-1;
+  a.landmarks.forEach((v,k)=>{ const t=sim.tiles.get(k); const s=v-0.35*hexDist(t,a); if(s>bestV){bestV=s;best=k;} });
+  const bestRaw = best ? a.landmarks.get(best) : -1;
+  if(canBuild || a.type==='planner'){
+    if(best && bestRaw>=a.threshold){
+      a.target=best; const t=sim.tiles.get(best);
+      if(key(a.q,a.r)===best){
+        if(!canBuild){ a.status='waiting at planned site for resources'; return; }
+        if(validSite(sim,t)) { build(sim,a,t); a.status='built a settlement'; }
+        else { a.landmarks.delete(best); a.target=null; a.status='site was taken — re-planning'; }
+        return;
+      }
+      if(!a.path.length || a.path[a.path.length-1]!==best){ const p=plan(sim,a,(tt,k)=>k===best); a.path=p?p.path:[]; }
+      a.status = canBuild ? 'heading to best known site' : 'pre-positioning at a remembered site';
+    } else if(canBuild || a.type==='explorer'){
+      a.threshold=Math.max(2,a.threshold-0.04);   // patience runs out slowly
+      if(!a.path.length || a.target) { a.target=null; explore(sim,a); }
+    } else { a.status='waiting for resources'; return; }
+  } else if(a.type==='explorer'){ a.target=null; if(!a.path.length) explore(sim,a); }
+  else { a.status='waiting for resources'; return; }
+  stepAlong(sim,a);
+}
+function perf(sim,a){
+  const g=sim.cfg.goal;
+  if(g==='race') return a.vp;
+  if(g==='territory') return [...sim.tiles.values()].filter(t=>t.owner===a.id).length;
+  return Math.min(...RES.map(r=>a.collected[r]));
+}
+function goalTarget(cfg){ return cfg.goal==='territory' ? cfg.target*3 : cfg.target; }
+function tick(sim){
+  if(sim.done) return;
+  sim.tick++;
+  const d = 1+Math.floor(sim.rand()*6) + 1+Math.floor(sim.rand()*6); sim.roll=d;  // non-deterministic dice
+  if(d===7){
+    if(sim.world.params.robber && sim.agents.length){ // robber blocks the leader's best tile (dynamic environment)
+      const lead=[...sim.agents].sort((x,y)=>perf(sim,y)-perf(sim,x))[0]; let bt=null,bp=-1;
+      lead.settlements.forEach(k=>[sim.tiles.get(k),...neighbors(sim,sim.tiles.get(k))].forEach(t=>{ if(pips(t.n)>bp){bp=pips(t.n);bt=t;} }));
+      sim.robber = bt ? key(bt.q,bt.r) : null;
+    }
+  } else {
+    sim.tiles.forEach((t,k)=>{
+      if(t.n!==d || k===sim.robber) return;
+      for(const n of [t,...neighbors(sim,t)]){ const s=sim.settlements.get(key(n.q,n.r)); if(!s) continue;
+        const a=sim.agents[s.owner], r=TERR[t.t].res, amt=s.city?2:1; a.res[r]+=amt; a.collected[r]+=amt; }
+    });
+  }
+  for(const a of sim.agents) act(sim,a);
+  const tgt=goalTarget(sim.cfg);
+  const w = sim.agents.find(a=>perf(sim,a)>=tgt);
+  if(w || sim.tick>=MAX_TICKS){ sim.done=true; finish(sim); }
+}
+function finish(sim){
+  const tgt=goalTarget(sim.cfg);
+  const scores = sim.agents.map(a=>Math.min(1,perf(sim,a)/tgt));
+  const order = sim.agents.map((a,i)=>i).sort((i,j)=>scores[j]-scores[i] || sim.agents[i].travel-sim.agents[j].travel);
+  sim.winner = sim.agents[order[0]];
+  const mx=Math.max(...scores), mn=Math.min(...scores);
+  const byType={};
+  sim.agents.forEach((a,i)=>{ (byType[a.type]=byType[a.type]||[]).push(scores[i]); });
+  sim.result = { ticks:sim.tick, reached: scores.some(s=>s>=1), winner:sim.winner.name, winnerType:sim.winner.type,
+    fairness: mx>0 ? mn/mx : 1, scores, byType: Object.fromEntries(Object.entries(byType).map(([k,v])=>[k,v.reduce((s,x)=>s+x,0)/v.length])),
+    explored: sim.agents.reduce((s,a)=>s+[...a.known].filter(k=>sim.tiles.get(k).t!=='water').length/sim.land.length,0)/sim.agents.length };
+}
+function runHeadless(world,cfg,seed){ const s=createSim(world,cfg,seed); while(!s.done) tick(s); return s.result; }
+
+// ===================== Rendering =====================
+const SIZE=24, SQ3=Math.sqrt(3);
+const toPx = (t,c) => ({ x:c.width/2 + SIZE*SQ3*(t.q+t.r/2), y:c.height/2 + SIZE*1.5*t.r });
+function hexPath(ctx,x,y,s){ ctx.beginPath(); for(let i=0;i<6;i++){ const a=Math.PI/180*(60*i-30); ctx.lineTo(x+s*Math.cos(a), y+s*Math.sin(a)); } ctx.closePath(); }
+function draw(canvas, sim, viewId, hoverKey){
+  const ctx=canvas.getContext('2d'); ctx.clearRect(0,0,canvas.width,canvas.height);
+  const viewer = viewId>=0 ? sim.agents[viewId] : null;
+  sim.tiles.forEach((t,k)=>{
+    const {x,y}=toPx(t,canvas); const known=!viewer || viewer.known.has(k);
+    hexPath(ctx,x,y,SIZE-1); ctx.fillStyle = known ? TERR[t.t].c : '#253041'; ctx.fill();
+    if(t.owner!==null && known){ hexPath(ctx,x,y,SIZE-3.5); ctx.strokeStyle=sim.agents[t.owner].color; ctx.lineWidth=3; ctx.globalAlpha=.75; ctx.stroke(); ctx.globalAlpha=1; }
+    if(t.road && known){ ctx.fillStyle='rgba(90,55,25,.55)'; ctx.fillRect(x-SIZE*.55,y+SIZE*.45,SIZE*1.1,3); }
+    if(k===hoverKey){ hexPath(ctx,x,y,SIZE-1); ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke(); }
+    if(known && t.n){ ctx.beginPath(); ctx.arc(x,y,8.5,0,7); ctx.fillStyle='#f7f1e1'; ctx.fill();
+      ctx.fillStyle=(t.n===6||t.n===8)?'#b42a2a':'#222'; ctx.font='bold 10px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(t.n,x,y+.5); }
+    if(k===sim.robber && known){ ctx.beginPath(); ctx.arc(x+10,y-10,5,0,7); ctx.fillStyle='#111'; ctx.fill(); }
+  });
+  if(viewer){ // landmarks = remembered best sites
+    [...viewer.landmarks.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5).forEach(([k])=>{ const {x,y}=toPx(sim.tiles.get(k),canvas); star(ctx,x,y-12,5,'#ffd23f'); });
+  }
+  sim.settlements.forEach((s,k)=>{ if(viewer && !viewer.known.has(k)) return; const {x,y}=toPx(sim.tiles.get(k),canvas); const a=sim.agents[s.owner];
+    ctx.fillStyle=a.color; ctx.strokeStyle='#000'; ctx.lineWidth=1.2; const w=s.city?9:6;
+    ctx.beginPath(); ctx.moveTo(x-w,y+12); ctx.lineTo(x-w,y+4); ctx.lineTo(x,y-3+(s.city?-3:0)); ctx.lineTo(x+w,y+4); ctx.lineTo(x+w,y+12); ctx.closePath(); ctx.fill(); ctx.stroke(); });
+  for(const a of sim.agents){
+    if(viewer && viewer!==a && !viewer.known.has(key(a.q,a.r))) continue;
+    const p=toPx(a,canvas);
+    if(a.path.length && (!viewer || viewer===a)){ ctx.setLineDash([4,3]); ctx.strokeStyle=a.color; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(p.x,p.y);
+      a.path.forEach(k=>{ const q=toPx(sim.tiles.get(k),canvas); ctx.lineTo(q.x,q.y); }); ctx.stroke(); ctx.setLineDash([]); }
+    if(viewer===a){ ctx.beginPath(); ctx.arc(p.x,p.y,SIZE*1.6*a.vision+6,0,7); ctx.strokeStyle='rgba(255,255,255,.6)'; ctx.setLineDash([2,4]); ctx.stroke(); ctx.setLineDash([]); }
+    agentShape(ctx,a,p.x,p.y-2);
+  }
+  ctx.fillStyle='rgba(0,0,0,.5)'; ctx.fillRect(6,6,128,22); ctx.fillStyle='#fff'; ctx.font='12px system-ui'; ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillText(`tick ${sim.tick}  ·  dice ${sim.roll||'–'}`,12,17);
+}
+function agentShape(ctx,a,x,y,s=8){
+  ctx.fillStyle=a.color; ctx.strokeStyle= a.color==='#111111'?'#fff':'#000'; ctx.lineWidth=1.5; ctx.beginPath();
+  const sh=TYPES[a.type].shape;
+  if(sh==='tri'){ ctx.moveTo(x,y-s); ctx.lineTo(x+s,y+s*.8); ctx.lineTo(x-s,y+s*.8); ctx.closePath(); }
+  else if(sh==='circle') ctx.arc(x,y,s*.85,0,7); else ctx.rect(x-s*.75,y-s*.75,s*1.5,s*1.5);
+  ctx.fill(); ctx.stroke();
+}
+function star(ctx,x,y,r,c){ ctx.beginPath(); for(let i=0;i<10;i++){ const rr=i%2?r/2.2:r, a=Math.PI/5*i-Math.PI/2; ctx.lineTo(x+rr*Math.cos(a),y+rr*Math.sin(a)); } ctx.closePath(); ctx.fillStyle=c; ctx.fill(); ctx.strokeStyle='#000'; ctx.lineWidth=.8; ctx.stroke(); }
+
+// ===================== UI =====================
+const $ = id => document.getElementById(id);
+const panels = { A:$('wA'), B:$('wB') };
+let worlds = {}, sims = {}, running=false, timer=null, hover={A:null,B:null}, logged={};
+
+document.querySelectorAll('label.row').forEach(l=>{ const i=l.querySelector('input'), o=l.querySelector('output'); if(!o||i.type!=='range') return;
+  const f=()=>o.textContent=i.value; i.addEventListener('input',f); f(); });
+const TARGETS = { race:{lbl:'Target VP',min:3,max:10,val:6}, territory:{lbl:'Target hexes ÷3',min:2,max:10,val:5}, balanced:{lbl:'Target of each',min:2,max:12,val:5} };
+document.querySelectorAll('input[name=goal]').forEach(r=>r.addEventListener('change',()=>{
+  document.querySelectorAll('.goal').forEach(g=>g.classList.toggle('on',g.querySelector('input').checked));
+  const T=TARGETS[r.value]; const t=$('target'); t.min=T.min; t.max=T.max; t.value=T.val; $('targetLbl').textContent=T.lbl; $('targetOut').textContent=T.val; restart();
+}));
+['nExplorer','nPlanner','nRusher','vision','target'].forEach(id=>$(id).addEventListener('change',restart));
+
+function newSims(){
+  const cfg=readCfg(); if(!Object.values(cfg.counts).some(Boolean)){ cfg.counts.planner=1; }
+  const seed=Math.floor(Math.random()*1e9);               // same agent seed in both worlds → only geography differs
+  for(const s of ['A','B']) sims[s]=createSim(worlds[s],cfg,seed);
+  logged={};
+  const va=$('viewAs'), cur=va.value; va.innerHTML='<option value="-1">God view (everything)</option>'+sims.A.agents.map(a=>`<option value="${a.id}">${a.name}'s memory</option>`).join('');
+  if([...va.options].some(o=>o.value===cur)) va.value=cur;
+  render();
+}
+function generate(){ const p=readParams(); worlds.A=generateWorld(p); worlds.B=generateWorld({...p,seed:p.seed+1}); newSims(); }
+function restart(){ if(worlds.A) newSims(); }
+function choose(s){
+  const rand=rng(Math.floor(Math.random()*1e9)), base=worlds[s];
+  worlds.A=mutateWorld(base,rand); worlds.B=mutateWorld(base,rand); newSims();
+}
+function render(){
+  const view=+$('viewAs').value;
+  for(const s of ['A','B']){
+    const sim=sims[s], el=panels[s]; if(!sim) continue;
+    draw(el.querySelector('canvas'),sim,view,hover[s]);
+    const st=worldStats(sim.world);
+    el.querySelector('[data-id]').textContent=`#${sim.world.id}${sim.world.parent?` (variation of #${sim.world.parent})`:''}`;
+    el.querySelector('.stats').textContent=`Water ${(st.water*100|0)}% · Desert ${(st.desert*100|0)}% · Avg production ${st.pips.toFixed(1)} pips/hex · Robber ${sim.world.params.robber?'on':'off'}`;
+    const tgt=goalTarget(sim.cfg);
+    el.querySelector('.bars').innerHTML = sim.agents.map(a=>{ const p=perf(sim,a), pct=Math.min(100,p/tgt*100);
+      return `<div class="bar"><span>${{tri:'▲',circle:'●',square:'■'}[TYPES[a.type].shape]} ${a.name}</span><div class="track"><div class="fill" style="width:${pct}%;background:${a.color==='#ffffff'?'#bbb':a.color}"></div></div><span>${p} / ${tgt}</span>
+        <div class="st">${a.status} · walked ${a.steps} hexes (cost ${a.travel}) · knows ${Math.round([...a.known].filter(k=>sim.tiles.get(k).t!=='water').length/sim.land.length*100)}% of land</div></div>`; }).join('');
+    const v=el.querySelector('.verdict');
+    if(sim.done){ const r=sim.result; v.innerHTML = r.reached ? `🏆 ${r.winner} reached the goal in ${r.ticks} ticks · fairness ${r.fairness.toFixed(2)}` : `⏱ Time up (${MAX_TICKS} ticks). Leader: ${r.winner} · fairness ${r.fairness.toFixed(2)}`;
+      if(!logged[s]){ logged[s]=1; logHistory(sim); } }
+    else v.textContent=`Goal: ${{race:'race to '+tgt+' VP',territory:'claim '+tgt+' hexes',balanced:tgt+' of every resource'}[sim.cfg.goal]}`;
+  }
+  if(sims.A && sims.A.done && sims.B.done && running) toggleRun(false);
+}
+function logHistory(sim){
+  const st=worldStats(sim.world), r=sim.result;
+  $('hist').insertAdjacentHTML('afterbegin',`<tr><td>#${sim.world.id}</td><td>${sim.cfg.goal}</td><td>${(st.water*100|0)}%</td><td>${(st.desert*100|0)}%</td><td>${st.pips.toFixed(1)}</td><td>${r.ticks}${r.reached?'':' (timeout)'}</td><td>${r.winner}</td><td>${r.fairness.toFixed(2)}</td></tr>`);
+}
+function toggleRun(on){
+  running = on===undefined ? !running : on; $('btnRun').textContent = running?'⏸ Pause':'▶ Run';
+  clearInterval(timer);
+  if(running) timer=setInterval(()=>{ const n=Math.max(1,+$('speed').value/8|0); for(let i=0;i<n;i++){ tick(sims.A); tick(sims.B);} render(); }, 1000/Math.min(30,+$('speed').value));
+}
+$('btnGen').onclick=generate; $('btnRun').onclick=()=>toggleRun(); $('btnStep').onclick=()=>{ tick(sims.A); tick(sims.B); render(); };
+$('btnRestart').onclick=restart; $('viewAs').onchange=render;
+document.querySelectorAll('[data-choose]').forEach(b=>b.onclick=()=>choose(b.dataset.choose));
+['water','desert','richness','clustering','robber'].forEach(id=>$(id).addEventListener('change',generate));
+
+// hover: two notions of location + three notions of distance
+for(const s of ['A','B']){
+  const c=panels[s].querySelector('canvas');
+  c.addEventListener('mousemove',e=>{
+    const sim=sims[s]; if(!sim) return; const rc=c.getBoundingClientRect(), mx=(e.clientX-rc.left)*c.width/rc.width, my=(e.clientY-rc.top)*c.height/rc.height;
+    let best=null,bd=1e9; sim.tiles.forEach((t,k)=>{ const p=toPx(t,c), d=(p.x-mx)**2+(p.y-my)**2; if(d<bd){bd=d;best=k;} });
+    if(bd>SIZE*SIZE){ hover[s]=null; $('tip').style.display='none'; render(); return; }
+    hover[s]=best; const t=sim.tiles.get(best), view=+$('viewAs').value, a=sim.agents[view>=0?view:0];
+    let html=`<b>${TERR[t.t].name}</b>${t.n?` · number ${t.n} (${pips(t.n)} pips)`:''}${t.road?' · road':''}${best===sim.robber?' · ROBBER':''}<br>Grid location (q,r): (${t.q}, ${t.r})`;
+    if(a){ const dq=t.q-a.home.q, dr=t.r-a.home.r;
+      const tc = plan({...sim,agents:[]},{...a,known:new Set(sim.tiles.keys())},(tt,k)=>k===best);
+      const p1=toPx(t,c), p2=toPx(a,c);
+      html+=`<br>Relative to ${a.name}'s start: Δq ${dq>=0?'+':''}${dq}, Δr ${dr>=0?'+':''}${dr}<hr style="border:0;border-top:1px solid #555;margin:4px 0">From ${a.name}:<br>· hex steps: ${hexDist(t,a)}<br>· straight-line: ${(Math.hypot(p1.x-p2.x,p1.y-p2.y)/(SIZE*SQ3)).toFixed(2)} hex-widths<br>· travel cost (terrain-weighted): ${key(a.q,a.r)===best?0:(tc?tc.cost:'unreachable')}`;
+      if(view>=0) html+=`<br>· ${a.known.has(best)?'in memory'+(a.landmarks.has(best)?` — landmark value ${a.landmarks.get(best).toFixed(1)}`:''):'unknown to this agent'}`; }
+    const tip=$('tip'); tip.innerHTML=html; tip.style.display='block'; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+14)+'px'; render();
+  });
+  c.addEventListener('mouseleave',()=>{ hover[s]=null; $('tip').style.display='none'; render(); });
+}
+$('legend').innerHTML = Object.values(TERR).map(t=>`<span><span class="sw" style="background:${t.c}"></span>${t.name}</span>`).join('')+
+  '<span>● number = dice roll that produces (6/8 red = best)</span><span>⌂ settlement / city</span><span>◼ black dot = robber</span><span>━ brown bar = road</span><span>coloured hex rim = claimed territory</span><span>★ landmark (in agent view)</span><span>- - planned path</span>';
+
+// tabs
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.tabpanel').forEach(p=>p.hidden = p.id!=='tab-'+b.dataset.tab); });
+
+// ----- Hypothesis test -----
+const tick0 = () => new Promise(r=>setTimeout(r,0));
+$('btnTest').onclick = async ()=>{
+  const v=$('xVar').value, A=+$('xA').value, B=+$('xB').value, N=Math.max(2,+$('xN').value), out=$('testOut'); $('btnTest').disabled=true;
+  const base=readParams(), cfg=readCfg(); const agg={};
+  for(const val of [A,B]){
+    const rs=[];
+    for(let i=0;i<N;i++){
+      const p={...base, seed:1000+i}; const c={...cfg, counts:{...cfg.counts}};
+      if(v==='vision') c.vision=val; else if(v==='robber') p.robber=!!val; else p[v]=val/100;
+      rs.push(runHeadless(generateWorld(p),c,5000+i));
+      if(i%5===0){ out.textContent=`Running… ${v}=${val}, trial ${i+1}/${N}`; await tick0(); }
+    }
+    const types=Object.keys(TYPES).filter(t=>cfg.counts[t]>0);
+    agg[val]={ ticks:avg(rs.map(r=>r.ticks)), reached:avg(rs.map(r=>r.reached?1:0)), fair:avg(rs.map(r=>r.fairness)), explored:avg(rs.map(r=>r.explored)),
+      wins:Object.fromEntries(types.map(t=>[t,rs.filter(r=>r.winnerType===t).length/N])), score:Object.fromEntries(types.map(t=>[t,avg(rs.map(r=>r.byType[t]||0))])) };
+  }
+  const a=agg[A], b=agg[B], types=Object.keys(a.wins), pct=x=>(x*100).toFixed(0)+'%';
+  const row=(lbl,f)=>`<tr><td>${lbl}</td><td>${f(a)}</td><td>${f(b)}</td></tr>`;
+  let html=`<table><thead><tr><th>Measure (avg of ${N} islands)</th><th>${v} = ${A}</th><th>${v} = ${B}</th></tr></thead><tbody>
+    ${row('Ticks to finish',x=>x.ticks.toFixed(0))}${row('Goal reached',x=>pct(x.reached))}${row('Fairness (weakest ÷ strongest)',x=>x.fair.toFixed(2))}${row('Land explored per agent',x=>pct(x.explored))}
+    ${types.map(t=>row(`${TYPES[t].name} win rate`,x=>pct(x.wins[t]))).join('')}${types.map(t=>row(`${TYPES[t].name} avg goal progress`,x=>pct(x.score[t]))).join('')}</tbody></table>`;
+  const dT=(b.ticks-a.ticks)/a.ticks, bestA=types.sort((x,y)=>a.wins[y]-a.wins[x])[0], bestB=[...types].sort((x,y)=>b.wins[y]-b.wins[x])[0];
+  html+=`<div class="conclusion"><b>Result:</b> changing <b>${v}</b> from ${A} to ${B} made games <b>${Math.abs(dT*100).toFixed(0)}% ${dT>0?'slower':'faster'}</b> and competition <b>${b.fair>a.fair?'fairer':'less fair'}</b> (${a.fair.toFixed(2)} → ${b.fair.toFixed(2)}). `+
+    (bestA===bestB?`<b>${TYPES[bestA].name}s</b> won most often in both conditions.`:`The most successful strategy shifted from <b>${TYPES[bestA].name}s</b> to <b>${TYPES[bestB].name}s</b>.`)+
+    ` <span class="hint">Differences under ~10% may be noise — raise the trial count to be sure.</span></div>`;
+  out.innerHTML=html; $('btnTest').disabled=false;
+};
+const avg = a => a.reduce((s,x)=>s+x,0)/a.length;
+
+// ----- Automated evolution -----
+function objective(world,cfg,obj){
+  const rs=[0,1,2].map(i=>runHeadless(world,cfg,777+i));
+  if(obj==='fair') return avg(rs.map(r=>r.fairness));
+  if(obj==='fast') return 1-avg(rs.map(r=>r.ticks))/MAX_TICKS;
+  if(obj==='slow') return avg(rs.map(r=>r.ticks))/MAX_TICKS;
+  return avg(rs.map(r=>{ const mine=r.byType[obj]||0, others=Object.entries(r.byType).filter(([t])=>t!==obj).map(([,v])=>v); return mine-(others.length?avg(others):0); }));
+}
+$('btnEvo').onclick = async ()=>{
+  const cfg=readCfg(), obj=$('evoObj').value, N=Math.max(1,+$('evoN').value), rand=rng(Date.now()|0);
+  if(cfg.counts[obj]===0){ $('evoOut').textContent=`Add at least one ${obj} (and one other agent type) first.`; return; }
+  toggleRun(false); $('btnEvo').disabled=true;
+  const start=worlds.A; let best=start, bestS=objective(best,cfg,obj); const hist=[{c:bestS,b:bestS}];
+  for(let e=1;e<=N;e++){
+    const cand=mutateWorld(best,rand,3+Math.floor(rand()*5)), s=objective(cand,cfg,obj);
+    if(s>=bestS){ best=cand; bestS=s; }
+    hist.push({c:s,b:bestS}); drawEvo(hist);
+    $('evoOut').textContent=`Epoch ${e}/${N} · candidate ${s.toFixed(3)} · best ${bestS.toFixed(3)}`; await tick0();
+  }
+  worlds.A=best; worlds.B=start; newSims();
+  const s0=worldStats(start), s1=worldStats(best);
+  $('evoOut').innerHTML=`<div class="conclusion"><b>Done.</b> ${N} environments generated and evaluated. Score ${hist[0].b.toFixed(3)} → <b>${bestS.toFixed(3)}</b>.
+    The evolved island (World A, #${best.id}) has water ${(s0.water*100|0)}% → ${(s1.water*100|0)}%, desert ${(s0.desert*100|0)}% → ${(s1.desert*100|0)}%, production ${s0.pips.toFixed(1)} → ${s1.pips.toFixed(1)} pips/hex, robber ${best.params.robber?'on':'off'}.
+    Press ▶ Run to watch it against the original (World B).</div>`;
+  $('btnEvo').disabled=false;
+};
+function drawEvo(h){
+  const c=$('evoChart'), ctx=c.getContext('2d'), W=c.width, H=c.height, pad=28; ctx.clearRect(0,0,W,H);
+  const vals=h.flatMap(x=>[x.c,x.b]), lo=Math.min(...vals), hi=Math.max(...vals)+1e-6;
+  const X=i=>pad+(W-2*pad)*i/Math.max(1,h.length-1), Y=v=>H-pad-(H-2*pad)*(v-lo)/(hi-lo);
+  ctx.strokeStyle='#ddd'; ctx.beginPath(); ctx.moveTo(pad,H-pad); ctx.lineTo(W-pad,H-pad); ctx.stroke();
+  ctx.fillStyle='#999'; h.forEach((p,i)=>{ ctx.beginPath(); ctx.arc(X(i),Y(p.c),2.5,0,7); ctx.fill(); });
+  ctx.strokeStyle='#b4532a'; ctx.lineWidth=2.5; ctx.beginPath(); h.forEach((p,i)=>ctx.lineTo(X(i),Y(p.b))); ctx.stroke();
+  ctx.fillStyle='#555'; ctx.font='12px system-ui'; ctx.fillText('best so far',W-pad-70,14); ctx.fillStyle='#999'; ctx.fillText('● candidate',W-pad-150,14);
+  ctx.fillText(hi.toFixed(2),2,pad); ctx.fillText(lo.toFixed(2),2,H-pad); ctx.fillText('epoch →',W/2,H-6);
+}
+
+generate();
+</script>
+</body>
+</html>
