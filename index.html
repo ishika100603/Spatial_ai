@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shibuya Crowd</title>
+<style>
+  :root { --panel: rgba(18, 22, 30, 0.82); --text: #eef1f5; --muted: #9aa4b2; --accent: #ffd23f; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #cfd8e3; color: var(--text);
+    font: 13px/1.45 system-ui, -apple-system, Segoe UI, sans-serif; }
+  #scene { position: fixed; inset: 0; }
+  .panel { position: fixed; background: var(--panel); border-radius: 10px; padding: 10px 12px; backdrop-filter: blur(6px); }
+  #top { top: 12px; left: 12px; width: 300px; }
+  #top h1 { margin: 0 0 2px; font-size: 16px; letter-spacing: .5px; }
+  #crowd-panel { top: 12px; right: 12px; width: 300px; }
+  #help { bottom: 12px; left: 12px; color: var(--muted); max-width: 520px; }
+  hr { border: 0; border-top: 1px solid #ffffff22; margin: 6px 0; }
+  .muted { color: var(--muted); font-size: 12px; }
+  b { color: #fff; }
+  .goal b { color: var(--accent); }
+  #signal { display: inline-block; font-weight: 700; padding: 3px 10px; border-radius: 6px; margin: 6px 0; }
+  #signal.go { background: #1f9d55; } #signal.stop { background: #c53030; }
+  .row { display: flex; gap: 6px; align-items: center; margin: 6px 0; flex-wrap: wrap; }
+  select, button, input[type=number] { font: inherit; border-radius: 6px; border: 1px solid #ffffff33; background: #2a3140; color: var(--text); padding: 4px 8px; }
+  button { cursor: pointer; } button:hover { background: #3a4458; }
+  button.primary { background: var(--accent); color: #111; border: 0; font-weight: 600; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+  #toasts { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); display: grid; gap: 6px; pointer-events: none; }
+  .toast { background: var(--panel); padding: 6px 12px; border-radius: 8px; }
+  #lab { position: fixed; inset: 0; background: rgba(10, 12, 18, 0.92); overflow: auto; padding: 20px; }
+  #lab h2 { margin: 0 0 4px; } #lab h3 { margin: 18px 0 6px; }
+  .cols { display: flex; gap: 28px; flex-wrap: wrap; }
+  #pair { display: flex; gap: 14px; flex-wrap: wrap; }
+  .card { background: #1b212c; border-radius: 10px; padding: 10px; width: 280px; }
+  .card h4 { margin: 0 0 6px; } canvas { border-radius: 6px; display: block; margin-bottom: 6px; max-width: 100%; }
+  #evo-log { max-height: 160px; overflow: auto; font-size: 12px; color: var(--muted); }
+  @media (max-width: 720px) { #crowd-panel, #help { display: none; } #top { width: calc(100% - 24px); } }
+</style>
+<script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="scene"></div>
+
+<div id="top" class="panel">
+  <h1>SHIBUYA · Anatomy of a Crowd</h1>
+  <div id="signal">…</div>
+  <div id="player"></div>
+  <hr>
+  <div class="row">Layout <select id="preset"></select></div>
+  <div class="row">Hour <input id="hour" type="range" min="0" max="23" value="18"> <button id="tokyo-now">Tokyo now</button></div>
+  <div class="row"><button id="open-lab" class="primary">Design lab ▸</button></div>
+</div>
+
+<div id="crowd-panel" class="panel"><div id="crowd"></div></div>
+
+<div id="help" class="panel">
+  <b>WASD</b> walk · <b>Shift</b> run · <b>drag</b> look · <b>wheel</b> zoom · <b>V</b> overhead view.
+  Reach the yellow beacon fast. Crossing on red costs 5 s.
+  <span style="color:#e67a3c">Orange</span> zones slow you down, <span style="color:#40b070">green</span> zones speed you up, yellow rails block you.
+</div>
+
+<div id="toasts"></div>
+
+<div id="lab" hidden>
+  <div class="row" style="justify-content:space-between">
+    <div><h2>Design lab</h2><div class="muted">Each variant is simulated for 150 s with the same crowd. The red heatmap shows where people spent time.</div></div>
+    <div class="row"><button id="play-lab" class="primary">Play this design ▸</button><button id="close-lab">Close</button></div>
+  </div>
+  <div class="cols">
+    <div>
+      <h3>Manual: choose your own adventure <span id="lab-gen" class="muted"></span></h3>
+      <div class="row"><button id="new-pair">New pair</button></div>
+      <div id="pair"></div>
+    </div>
+    <div>
+      <h3>Automated: evolve</h3>
+      <div class="row">Epochs <input id="epochs" type="number" value="15" min="1" max="200" style="width:70px"> <button id="run-evo">Run</button></div>
+      <canvas id="evo-chart" width="300" height="90" style="background:#1b212c"></canvas>
+      <div class="card"><h4>Best so far</h4><canvas id="evo-best" width="260" height="260"></canvas><div id="evo-metrics"></div></div>
+      <div id="evo-log"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
